@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { createClient } from "@/lib/supabase/client";
 import type { Recipe, RecipeDraft, RecipeDifficulty, RecipeIngredient } from "@/types";
 
@@ -5,7 +7,15 @@ import type { Recipe, RecipeDraft, RecipeDifficulty, RecipeIngredient } from "@/
  * Accès aux recettes (Supabase, sans authentification — cf. supabase/schema.sql).
  * Utilisé côté navigateur ("use client"). Toutes les fonctions supposent la
  * config Supabase présente ; l'UI vérifie `isSupabaseConfigured()` avant.
+ *
+ * Les écritures passent par un client NON typé : le type `Database` est écrit à
+ * la main (provisoire) et l'inférence générique de supabase-js sur insert/update
+ * s'effondre en `never`. On garde les types pour le select/documentation et on
+ * cast au moment des mutations — le comportement runtime est identique.
  */
+function db(): SupabaseClient {
+  return createClient() as unknown as SupabaseClient;
+}
 
 /** Vue unifiée consommée par l'UI : sert autant pour un brouillon IA que pour
  *  une recette enregistrée, afin que le rendu soit strictement identique. */
@@ -64,13 +74,12 @@ export function draftToView(d: RecipeDraft): RecipeView {
 }
 
 export async function listRecipes(): Promise<Recipe[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase
+  const { data, error } = await db()
     .from("recipes")
     .select("*")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as Recipe[];
 }
 
 export async function createRecipe(
@@ -78,8 +87,7 @@ export async function createRecipe(
   rawNote: string | null,
   source: "ai" | "manual",
 ): Promise<Recipe> {
-  const supabase = createClient();
-  const { data, error } = await supabase
+  const { data, error } = await db()
     .from("recipes")
     .insert({
       title: draft.title,
@@ -97,17 +105,15 @@ export async function createRecipe(
     .single();
   if (error) throw error;
   if (!data) throw new Error("Enregistrement : aucune donnée retournée.");
-  return data;
+  return data as Recipe;
 }
 
 export async function toggleFavorite(id: string, next: boolean): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.from("recipes").update({ is_favorite: next }).eq("id", id);
+  const { error } = await db().from("recipes").update({ is_favorite: next }).eq("id", id);
   if (error) throw error;
 }
 
 export async function deleteRecipe(id: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.from("recipes").delete().eq("id", id);
+  const { error } = await db().from("recipes").delete().eq("id", id);
   if (error) throw error;
 }
