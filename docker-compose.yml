@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        # Variables publiques inlinées au build (voir Dockerfile).
+        # Renseignées depuis le .env à côté de ce compose (ou l'environnement du shell).
+        NEXT_PUBLIC_TRADE_URL: ${NEXT_PUBLIC_TRADE_URL}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    container_name: klarte-vie-web
+    restart: unless-stopped
+    # Exposé seulement en local : Nginx (sur l'hôte) reverse-proxie vers ce port.
+    ports:
+      - "127.0.0.1:3031:3031"
+    # Secrets serveur (ex. ANTHROPIC_API_KEY) chargés au runtime.
+    env_file:
+      - .env
