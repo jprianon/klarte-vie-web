@@ -172,7 +172,7 @@ export function AiCaptureCard({
 function parseIngredientLine(line: string): RecipeIngredient {
   const m = line.trim().match(/^([\d.,/]+)\s*([^\s\d][^\s]*)?\s+(.+)$/);
   if (m) {
-    return { qty: m[1], unit: m[2] ?? null, item: m[3].trim() };
+    return { qty: m[1] ?? null, unit: m[2] ?? null, item: (m[3] ?? line).trim() };
   }
   return { qty: null, unit: null, item: line.trim() };
 }

@@ -34,7 +34,8 @@ function gradientFor(name: string | null): [string, string] {
   const key = name ?? "";
   let hash = 0;
   for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
-  return GRADIENTS[hash % GRADIENTS.length];
+  // Index toujours dans [0, length) → l'assertion est sûre (noUncheckedIndexedAccess).
+  return GRADIENTS[hash % GRADIENTS.length]!;
 }
 
 /** Recettes mock (démo) mappées en vues quand Supabase n'est pas configuré. */
