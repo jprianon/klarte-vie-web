@@ -91,27 +91,20 @@ export function AiCaptureCard({
   }
 
   return (
-    <section className="mb-7 rounded-[22px] border border-border bg-card bg-[radial-gradient(120%_140%_at_100%_0%,rgba(94,92,230,0.07),transparent_55%),radial-gradient(120%_140%_at_0%_100%,rgba(10,132,255,0.06),transparent_50%)] p-5 shadow-sm">
-      <div className="mb-4 flex items-center gap-3">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-klarte-indigo px-3 py-1.5 text-xs font-semibold text-white shadow-[0_6px_16px_-8px_rgba(94,92,230,0.8)]">
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-klarte-indigo px-3 py-1.5 text-xs font-semibold text-white">
           <Sparkles className="size-3.5" />
           IA
         </span>
-        <div className="min-w-0">
-          <h2 className="text-[16px] font-semibold tracking-tight">
-            Note libre → recette formatée
-          </h2>
-          <p className="text-[13px] text-muted-foreground">
-            Écris comme ça te vient. L&apos;IA range dans le bon template et la bonne catégorie.
-          </p>
-        </div>
+        <p className="hidden text-[13px] text-muted-foreground sm:block">Écris comme ça te vient.</p>
         <button
           type="button"
           onClick={() => setMode((m) => (m === "ai" ? "manual" : "ai"))}
           className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground/70 hover:text-foreground"
         >
           <PenLine className="size-3.5" />
-          {mode === "ai" ? "Saisie manuelle" : "Mode IA"}
+          {mode === "ai" ? "Manuel" : "IA"}
         </button>
       </div>
 

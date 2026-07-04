@@ -1,7 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Clock, Heart, Loader2, Trash2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpen,
+  ChevronRight,
+  Clock,
+  Heart,
+  Loader2,
+  Plus,
+  Trash2,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 
 import { cn, formatDuration } from "@/lib/utils";
 import { toast } from "sonner";
@@ -18,6 +29,7 @@ import { AiCaptureCard } from "./ai-capture-card";
 import { RecipeTemplate } from "./recipe-template";
 import { Stars } from "./stars";
 
+type Mode = "home" | "add" | "browse";
 const ALL = "all";
 
 /** Palette de dégradés (couleurs iOS) attribuée de façon stable par catégorie. */
@@ -56,9 +68,13 @@ function mockViews(): RecipeView[] {
   }));
 }
 
-/** Écran principal du carnet : capture IA, filtres, grille de recettes. */
+/**
+ * Carnet de recettes — hub minimaliste. À l'arrivée, deux actions seulement :
+ * « Ajouter » (capture IA / manuelle) ou « Consulter » (grille + détail).
+ */
 export function RecipesView() {
   const [configured] = useState(isSupabaseConfigured);
+  const [mode, setMode] = useState<Mode>("home");
   const [recipes, setRecipes] = useState<RecipeView[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCat, setSelectedCat] = useState<string>(ALL);
@@ -127,51 +143,99 @@ export function RecipesView() {
     }
   }
 
+  /** Après un ajout : on recharge et on bascule sur la consultation. */
+  function handleSaved() {
+    void refresh();
+    setMode("browse");
+  }
+
+  // ── Écran d'accueil du carnet : deux actions ────────────────────────────
+  if (mode === "home") {
+    return (
+      <div className="mx-auto flex min-h-[68dvh] w-full max-w-md flex-col justify-center px-5 py-8">
+        <div className="animate-fade-in">
+          <h1 className="text-[26px] font-bold tracking-tight">Mon carnet</h1>
+          <p className="mt-1 text-[15px] text-muted-foreground">Que veux-tu faire ?</p>
+        </div>
+        <div className="mt-6 flex flex-col gap-4">
+          <ActionTile
+            icon={Plus}
+            title="Ajouter une recette"
+            subtitle="Une note libre, l'IA la met en forme"
+            gradient={["#0a84ff", "#5e5ce6"]}
+            onClick={() => setMode("add")}
+          />
+          <ActionTile
+            icon={BookOpen}
+            title="Consulter mes recettes"
+            subtitle={loading ? "…" : `${recipes.length} recette${recipes.length > 1 ? "s" : ""}`}
+            gradient={["#30d158", "#0a84ff"]}
+            onClick={() => setMode("browse")}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Écran d'ajout ───────────────────────────────────────────────────────
+  if (mode === "add") {
+    return (
+      <div className="mx-auto w-full max-w-2xl px-5 py-6">
+        <BackHeader title="Ajouter une recette" onBack={() => setMode("home")} />
+        <div className="animate-fade-in">
+          <AiCaptureCard canSave={configured} onSaved={handleSaved} />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Écran de consultation ───────────────────────────────────────────────
   return (
-    <div className="animate-fade-in px-6 py-6 md:px-8">
+    <div className="mx-auto w-full max-w-5xl px-5 py-6 md:px-8">
+      <BackHeader title="Mes recettes" onBack={() => setMode("home")} />
+
       {!configured && (
         <div className="mb-5 rounded-xl border border-border bg-secondary/50 px-4 py-3 text-[13px] text-muted-foreground">
-          Supabase non configuré : recettes de démonstration. Renseigne les clés dans{" "}
-          <code>.env</code> pour ajouter et enregistrer les tiennes.
+          Supabase non configuré : recettes de démonstration.
         </div>
       )}
 
-      <AiCaptureCard canSave={configured} onSaved={refresh} />
-
-      {/* Puces de catégories */}
-      <div className="mb-5 flex flex-wrap gap-2.5">
-        <Chip
-          active={selectedCat === ALL}
-          onClick={() => setSelectedCat(ALL)}
-          label="Toutes"
-          count={recipes.length}
-        />
-        {categories.map((c) => (
+      {categories.length > 0 && (
+        <div className="mb-5 flex flex-wrap gap-2.5">
           <Chip
-            key={c.name}
-            active={selectedCat === c.name}
-            onClick={() => setSelectedCat(c.name)}
-            label={c.name}
-            count={c.count}
-            dot={gradientFor(c.name)[1]}
+            active={selectedCat === ALL}
+            onClick={() => setSelectedCat(ALL)}
+            label="Toutes"
+            count={recipes.length}
           />
-        ))}
-      </div>
-
-      <div className="mb-4 flex items-baseline gap-3">
-        <h2 className="text-[17px] font-semibold tracking-tight">Récemment ajoutées</h2>
-        <span className="text-[13px] text-muted-foreground">
-          {filtered.length} recette{filtered.length > 1 ? "s" : ""}
-        </span>
-      </div>
+          {categories.map((c) => (
+            <Chip
+              key={c.name}
+              active={selectedCat === c.name}
+              onClick={() => setSelectedCat(c.name)}
+              label={c.name}
+              count={c.count}
+              dot={gradientFor(c.name)[1]}
+            />
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="grid place-items-center py-16 text-muted-foreground">
           <Loader2 className="size-6 animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border py-16 text-center text-[14px] text-muted-foreground">
-          Aucune recette pour l&apos;instant. Écris une note ci-dessus pour en ajouter une.
+        <div className="rounded-2xl border border-dashed border-border py-16 text-center">
+          <p className="text-[14px] text-muted-foreground">Aucune recette pour l&apos;instant.</p>
+          <button
+            type="button"
+            onClick={() => setMode("add")}
+            className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm active:scale-[0.98]"
+          >
+            <Plus className="size-4" />
+            Ajouter une recette
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -196,6 +260,58 @@ export function RecipesView() {
           onDelete={() => handleDelete(detail)}
         />
       )}
+    </div>
+  );
+}
+
+/** Grande tuile d'action (accueil du carnet). */
+function ActionTile({
+  icon: Icon,
+  title,
+  subtitle,
+  gradient,
+  onClick,
+}: {
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+  gradient: [string, string];
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex animate-fade-in items-center gap-4 rounded-[26px] border border-border bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]"
+    >
+      <span
+        className="grid size-14 shrink-0 place-items-center rounded-[18px] text-white shadow-lg"
+        style={{ backgroundImage: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
+      >
+        <Icon className="size-7" strokeWidth={1.9} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-lg font-semibold tracking-tight">{title}</span>
+        <span className="mt-0.5 block text-[13px] text-muted-foreground">{subtitle}</span>
+      </span>
+      <ChevronRight className="size-5 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
+    </button>
+  );
+}
+
+/** En-tête avec bouton retour (écrans ajout / consultation). */
+function BackHeader({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <div className="mb-5 flex items-center gap-3">
+      <button
+        type="button"
+        onClick={onBack}
+        aria-label="Retour"
+        className="grid size-9 place-items-center rounded-full border border-border bg-card text-foreground/70 transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-[18px]" />
+      </button>
+      <h1 className="text-xl font-bold tracking-tight">{title}</h1>
     </div>
   );
 }
