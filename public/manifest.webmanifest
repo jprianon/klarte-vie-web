@@ -2,7 +2,7 @@
   "name": "Klarte Vie",
   "short_name": "Klarte",
   "description": "Ton carnet de recettes, ton trading et ton sport, réunis en un seul dashboard.",
-  "start_url": "/recettes",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",

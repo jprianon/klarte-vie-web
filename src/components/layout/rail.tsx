@@ -177,7 +177,7 @@ function ItemLink({
 
 function Brand({ compact = false }: { compact?: boolean }) {
   return (
-    <Link href="/today" className="flex items-center gap-2.5 px-2">
+    <Link href="/" className="flex items-center gap-2.5 px-2">
       <span className="grid size-9 place-items-center rounded-[11px] bg-gradient-to-br from-[#4aa3ff] via-primary to-klarte-indigo shadow-[0_6px_16px_-6px_rgba(10,132,255,0.6)]">
         <LeafMark />
       </span>
