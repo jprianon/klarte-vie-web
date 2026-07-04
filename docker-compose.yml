@@ -14,9 +14,24 @@ services:
     # Exposé seulement en local : Nginx (sur l'hôte) reverse-proxie vers ce port.
     ports:
       - "127.0.0.1:3031:3031"
-    # Secrets serveur (ex. ANTHROPIC_API_KEY, RECIPE_AI_*) chargés au runtime.
+    # Secrets serveur (ANTHROPIC_API_KEY, RECIPE_AI_*, DATABASE_URL) au runtime.
     env_file:
       - .env
+    depends_on:
+      - db
+
+  # ── Base de données (recettes) : Postgres auto-hébergé ──────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: klarte-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: klarte
+      POSTGRES_DB: klarte
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    # Pas de port public : joignable seulement par l'app (postgres://…@db:5432).
+    volumes:
+      - db-data:/var/lib/postgresql/data
 
   # ── LLM local (optionnel) : reformatage des recettes sans API Claude ────────
   # Ne démarre QU'AVEC le profil dédié — le déploiement normal est inchangé :
@@ -41,4 +56,5 @@ services:
     mem_limit: 5g
 
 volumes:
+  db-data:
   ollama-models:

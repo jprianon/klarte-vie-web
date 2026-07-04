@@ -1,21 +1,10 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-import { createClient } from "@/lib/supabase/client";
 import type { Recipe, RecipeDraft, RecipeDifficulty, RecipeIngredient } from "@/types";
 
 /**
- * Accès aux recettes (Supabase, sans authentification — cf. supabase/schema.sql).
- * Utilisé côté navigateur ("use client"). Toutes les fonctions supposent la
- * config Supabase présente ; l'UI vérifie `isSupabaseConfigured()` avant.
- *
- * Les écritures passent par un client NON typé : le type `Database` est écrit à
- * la main (provisoire) et l'inférence générique de supabase-js sur insert/update
- * s'effondre en `never`. On garde les types pour le select/documentation et on
- * cast au moment des mutations — le comportement runtime est identique.
+ * Accès aux recettes côté navigateur : appelle les routes /api/recipes, qui
+ * elles-mêmes tapent le Postgres local (cf. src/lib/db.ts). Le navigateur ne
+ * parle jamais directement à la base.
  */
-function db(): SupabaseClient {
-  return createClient() as unknown as SupabaseClient;
-}
 
 /** Vue unifiée consommée par l'UI : sert autant pour un brouillon IA que pour
  *  une recette enregistrée, afin que le rendu soit strictement identique. */
@@ -33,13 +22,7 @@ export interface RecipeView {
   isFavorite: boolean;
 }
 
-export function isSupabaseConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  );
-}
-
-/** Ligne Supabase → vue UI. */
+/** Ligne base de données → vue UI. */
 export function recipeToView(r: Recipe): RecipeView {
   return {
     id: r.id,
@@ -73,13 +56,12 @@ export function draftToView(d: RecipeDraft): RecipeView {
   };
 }
 
-export async function listRecipes(): Promise<Recipe[]> {
-  const { data, error } = await db()
-    .from("recipes")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Recipe[];
+/** Liste + indicateur « base branchée ? ». */
+export async function fetchRecipes(): Promise<{ configured: boolean; recipes: Recipe[] }> {
+  const res = await fetch("/api/recipes", { cache: "no-store" });
+  if (!res.ok) throw new Error("list_failed");
+  const data = await res.json();
+  return { configured: Boolean(data.configured), recipes: (data.recipes ?? []) as Recipe[] };
 }
 
 export async function createRecipe(
@@ -87,33 +69,26 @@ export async function createRecipe(
   rawNote: string | null,
   source: "ai" | "manual",
 ): Promise<Recipe> {
-  const { data, error } = await db()
-    .from("recipes")
-    .insert({
-      title: draft.title,
-      category_name: draft.categoryName,
-      servings: draft.servings,
-      time_minutes: draft.timeMinutes,
-      difficulty: draft.difficulty,
-      ingredients: draft.ingredients,
-      steps: draft.steps,
-      tags: draft.tags,
-      raw_note: rawNote,
-      source,
-    })
-    .select("*")
-    .single();
-  if (error) throw error;
-  if (!data) throw new Error("Enregistrement : aucune donnée retournée.");
-  return data as Recipe;
+  const res = await fetch("/api/recipes", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ draft, rawNote, source }),
+  });
+  if (!res.ok) throw new Error("create_failed");
+  const data = await res.json();
+  return data.recipe as Recipe;
 }
 
 export async function toggleFavorite(id: string, next: boolean): Promise<void> {
-  const { error } = await db().from("recipes").update({ is_favorite: next }).eq("id", id);
-  if (error) throw error;
+  const res = await fetch(`/api/recipes/${id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ is_favorite: next }),
+  });
+  if (!res.ok) throw new Error("update_failed");
 }
 
 export async function deleteRecipe(id: string): Promise<void> {
-  const { error } = await db().from("recipes").delete().eq("id", id);
-  if (error) throw error;
+  const res = await fetch(`/api/recipes/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("delete_failed");
 }

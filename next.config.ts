@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
+  // Le driver Postgres reste externe au bundle serveur (copié tel quel dans le
+  // standalone) — pratique standard pour les drivers de base de données.
+  serverExternalPackages: ["pg"],
   images: {
     remotePatterns: [
       // Photos de recettes / avatars stockés sur Supabase Storage (plus tard).

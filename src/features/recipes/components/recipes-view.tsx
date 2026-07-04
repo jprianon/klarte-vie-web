@@ -18,8 +18,7 @@ import { cn, formatDuration } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   deleteRecipe,
-  isSupabaseConfigured,
-  listRecipes,
+  fetchRecipes,
   recipeToView,
   toggleFavorite,
   type RecipeView,
@@ -73,7 +72,7 @@ function mockViews(): RecipeView[] {
  * « Ajouter » (capture IA / manuelle) ou « Consulter » (grille + détail).
  */
 export function RecipesView() {
-  const [configured] = useState(isSupabaseConfigured);
+  const [configured, setConfigured] = useState(false);
   const [mode, setMode] = useState<Mode>("home");
   const [recipes, setRecipes] = useState<RecipeView[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,19 +82,17 @@ export function RecipesView() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      if (!configured) {
-        setRecipes(mockViews());
-        return;
-      }
-      const rows = await listRecipes();
-      setRecipes(rows.map(recipeToView));
+      const { configured: ok, recipes } = await fetchRecipes();
+      setConfigured(ok);
+      setRecipes(ok ? recipes.map(recipeToView) : mockViews());
     } catch {
       toast.error("Chargement des recettes impossible.");
-      setRecipes([]);
+      setConfigured(false);
+      setRecipes(mockViews());
     } finally {
       setLoading(false);
     }
-  }, [configured]);
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -196,7 +193,7 @@ export function RecipesView() {
 
       {!configured && (
         <div className="mb-5 rounded-xl border border-border bg-secondary/50 px-4 py-3 text-[13px] text-muted-foreground">
-          Supabase non configuré : recettes de démonstration.
+          Base de données non configurée : recettes de démonstration.
         </div>
       )}
 
