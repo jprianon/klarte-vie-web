@@ -18,7 +18,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     await dbToggleFavorite(id, body.is_favorite);
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (e) {
+    console.error("[api/recipes/:id]", e);
     return NextResponse.json({ error: "db_error" }, { status: 500 });
   }
 }
@@ -29,7 +30,8 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   try {
     await dbDeleteRecipe(id);
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (e) {
+    console.error("[api/recipes/:id]", e);
     return NextResponse.json({ error: "db_error" }, { status: 500 });
   }
 }

@@ -73,7 +73,7 @@ export function AiCaptureCard({
   async function handleSave() {
     if (!draft) return;
     if (!canSave) {
-      toast.error("Supabase non configuré : impossible d'enregistrer.");
+      toast.error("Base non configurée : impossible d'enregistrer.");
       return;
     }
     setSaving(true);
@@ -83,8 +83,8 @@ export function AiCaptureCard({
       setDraft(null);
       setNote("");
       onSaved();
-    } catch {
-      toast.error("L'enregistrement a échoué.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "L'enregistrement a échoué.");
     } finally {
       setSaving(false);
     }

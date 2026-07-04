@@ -16,9 +16,15 @@ export async function GET() {
   try {
     const recipes = await dbListRecipes();
     return NextResponse.json({ configured: true, recipes });
-  } catch {
+  } catch (e) {
+    console.error("[api/recipes GET]", e);
     return NextResponse.json(
-      { configured: true, recipes: [], error: "db_error", message: "Base injoignable." },
+      {
+        configured: true,
+        recipes: [],
+        error: "db_error",
+        message: e instanceof Error ? e.message : "Base injoignable.",
+      },
       { status: 500 },
     );
   }
@@ -40,7 +46,11 @@ export async function POST(request: Request) {
   try {
     const recipe = await dbCreateRecipe(parsed.data, rawNote, source);
     return NextResponse.json({ recipe });
-  } catch {
-    return NextResponse.json({ error: "db_error", message: "Enregistrement impossible." }, { status: 500 });
+  } catch (e) {
+    console.error("[api/recipes POST]", e);
+    return NextResponse.json(
+      { error: "db_error", message: e instanceof Error ? e.message : "Enregistrement impossible." },
+      { status: 500 },
+    );
   }
 }

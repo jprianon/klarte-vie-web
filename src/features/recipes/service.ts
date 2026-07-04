@@ -74,7 +74,10 @@ export async function createRecipe(
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ draft, rawNote, source }),
   });
-  if (!res.ok) throw new Error("create_failed");
+  if (!res.ok) {
+    const d = await res.json().catch(() => null);
+    throw new Error(d?.message || `Erreur ${res.status}`);
+  }
   const data = await res.json();
   return data.recipe as Recipe;
 }
