@@ -77,8 +77,7 @@ export interface Database {
       recipes: {
         Row: {
           id: string;
-          user_id: string;
-          category_id: string | null;
+          category_name: string | null;
           title: string;
           servings: number | null;
           time_minutes: number | null;
@@ -96,8 +95,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          user_id: string;
-          category_id?: string | null;
+          category_name?: string | null;
           title: string;
           servings?: number | null;
           time_minutes?: number | null;
@@ -115,8 +113,7 @@ export interface Database {
         };
         Update: {
           id?: string;
-          user_id?: string;
-          category_id?: string | null;
+          category_name?: string | null;
           title?: string;
           servings?: number | null;
           time_minutes?: number | null;
@@ -132,14 +129,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "recipes_category_id_fkey";
-            columns: ["category_id"];
-            referencedRelation: "recipe_categories";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
