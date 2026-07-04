@@ -5,7 +5,7 @@ import { Loader2, PenLine, Save, Sparkles, Wand2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import type { RecipeDraft, RecipeIngredient } from "@/types";
+import type { RecipeDifficulty, RecipeDraft, RecipeIngredient } from "@/types";
 import { SUGGESTED_CATEGORIES } from "@/features/recipes/format";
 import { createRecipe, draftToView } from "@/features/recipes/service";
 import { RecipeTemplate } from "./recipe-template";
@@ -182,7 +182,7 @@ function ManualForm({ onSubmit }: { onSubmit: (d: RecipeDraft) => void }) {
   const [categoryName, setCategoryName] = useState("");
   const [servings, setServings] = useState("");
   const [timeMinutes, setTimeMinutes] = useState("");
-  const [difficulty, setDifficulty] = useState<RecipeDraft["difficulty"]>("facile");
+  const [difficulty, setDifficulty] = useState<RecipeDifficulty>("facile");
   const [ingredientsText, setIngredientsText] = useState("");
   const [stepsText, setStepsText] = useState("");
   const [tagsText, setTagsText] = useState("");
@@ -258,7 +258,7 @@ function ManualForm({ onSubmit }: { onSubmit: (d: RecipeDraft) => void }) {
         <select
           className={inputCls}
           value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value as RecipeDraft["difficulty"])}
+          onChange={(e) => setDifficulty(e.target.value as RecipeDifficulty)}
         >
           <option value="facile">Facile</option>
           <option value="moyen">Moyen</option>
