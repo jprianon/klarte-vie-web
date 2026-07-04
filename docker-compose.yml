@@ -14,6 +14,31 @@ services:
     # Exposé seulement en local : Nginx (sur l'hôte) reverse-proxie vers ce port.
     ports:
       - "127.0.0.1:3031:3031"
-    # Secrets serveur (ex. ANTHROPIC_API_KEY) chargés au runtime.
+    # Secrets serveur (ex. ANTHROPIC_API_KEY, RECIPE_AI_*) chargés au runtime.
     env_file:
       - .env
+
+  # ── LLM local (optionnel) : reformatage des recettes sans API Claude ────────
+  # Ne démarre QU'AVEC le profil dédié — le déploiement normal est inchangé :
+  #   docker compose --profile ollama up -d --build
+  # puis (une fois) : docker exec klarte-ollama ollama pull qwen2.5:3b
+  ollama:
+    image: ollama/ollama:latest
+    container_name: klarte-ollama
+    restart: unless-stopped
+    profiles: ["ollama"]
+    environment:
+      # Décharge le modèle de la RAM après 5 min d'inactivité (VPS sans swap).
+      OLLAMA_KEEP_ALIVE: "5m"
+    # Pas de port public : joignable seulement par l'app via le réseau Docker
+    # (http://ollama:11434).
+    expose:
+      - "11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    # Garde-fou mémoire : le VPS n'a pas de swap, on borne Ollama pour ne jamais
+    # menacer les autres conteneurs. Un modèle 3B tient largement sous cette limite.
+    mem_limit: 5g
+
+volumes:
+  ollama-models:
