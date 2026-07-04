@@ -96,6 +96,7 @@ export async function createRecipe(
     .select("*")
     .single();
   if (error) throw error;
+  if (!data) throw new Error("Enregistrement : aucune donnée retournée.");
   return data;
 }
 
