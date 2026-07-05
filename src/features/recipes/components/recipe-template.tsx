@@ -20,7 +20,7 @@ export function RecipeTemplate({ view }: { view: RecipeView }) {
 
   return (
     <div>
-      <h3 className="text-[19px] font-bold tracking-tight">{view.title}</h3>
+      <h3 className="font-display text-[19px] font-bold tracking-tight">{view.title}</h3>
 
       <div className="my-3 flex flex-wrap items-center gap-3.5 text-[12.5px] font-medium text-foreground/70">
         {times.map((t) => (

@@ -14,7 +14,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 4%;
 
-    --primary: 211 100% 52%; /* #0A84FF iOS blue */
+    --primary: 152 42% 16%; /* vert forêt profond */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 5% 96%;
@@ -31,7 +31,7 @@
 
     --border: 240 6% 90%;
     --input: 240 6% 90%;
-    --ring: 211 100% 52%;
+    --ring: 152 42% 16%;
 
     --radius: 1.25rem;
   }
@@ -46,7 +46,7 @@
     --popover: 240 8% 8%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 211 100% 55%;
+    --primary: 150 40% 45%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 240 5% 14%;
@@ -63,7 +63,7 @@
 
     --border: 240 5% 18%;
     --input: 240 5% 18%;
-    --ring: 211 100% 55%;
+    --ring: 150 40% 45%;
   }
 }
 

@@ -9,8 +9,6 @@ import {
   Heart,
   Loader2,
   Plus,
-  Trash2,
-  X,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,7 +23,7 @@ import {
 } from "@/features/recipes/service";
 import { MOCK_CATEGORIES, MOCK_RECIPES } from "@/features/recipes/mock";
 import { AiCaptureCard } from "./ai-capture-card";
-import { RecipeTemplate } from "./recipe-template";
+import { RecipeDetail } from "./recipe-detail";
 import { Stars } from "./stars";
 
 type Mode = "home" | "add" | "browse";
@@ -158,7 +156,7 @@ export function RecipesView() {
     return (
       <div className="mx-auto flex min-h-[68dvh] w-full max-w-md flex-col justify-center px-5 py-8">
         <div className="animate-fade-in">
-          <h1 className="text-[26px] font-bold tracking-tight">Mon carnet</h1>
+          <h1 className="font-display text-[28px] font-bold tracking-tight">Mon carnet</h1>
           <p className="mt-1 text-[15px] text-muted-foreground">Que veux-tu faire ?</p>
         </div>
         <div className="mt-6 flex flex-col gap-4">
@@ -166,14 +164,14 @@ export function RecipesView() {
             icon={Plus}
             title="Ajouter une recette"
             subtitle="Une note libre, l'IA la met en forme"
-            gradient={["#0a84ff", "#5e5ce6"]}
+            gradient={["#2f9e5f", "#14532d"]}
             onClick={() => setMode("add")}
           />
           <ActionTile
             icon={BookOpen}
             title="Consulter mes recettes"
             subtitle={loading ? "…" : `${recipes.length} recette${recipes.length > 1 ? "s" : ""}`}
-            gradient={["#30d158", "#0a84ff"]}
+            gradient={["#3ba55c", "#166534"]}
             onClick={() => setMode("browse")}
           />
         </div>
@@ -256,8 +254,9 @@ export function RecipesView() {
       )}
 
       {detail && (
-        <DetailModal
+        <RecipeDetail
           view={detail}
+          gradient={gradientFor(detail.categoryName)}
           canEdit={configured}
           onClose={() => setDetail(null)}
           onToggleFavorite={() => handleToggleFavorite(detail)}
@@ -295,7 +294,7 @@ function ActionTile({
         <Icon className="size-7" strokeWidth={1.9} />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-lg font-semibold tracking-tight">{title}</span>
+        <span className="block font-display text-lg font-semibold tracking-tight">{title}</span>
         <span className="mt-0.5 block text-[13px] text-muted-foreground">{subtitle}</span>
       </span>
       <ChevronRight className="size-5 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5" />
@@ -315,7 +314,7 @@ function BackHeader({ title, onBack }: { title: string; onBack: () => void }) {
       >
         <ArrowLeft className="size-[18px]" />
       </button>
-      <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+      <h1 className="font-display text-xl font-bold tracking-tight">{title}</h1>
     </div>
   );
 }
@@ -366,7 +365,7 @@ function RecipeCard({
         )}
       </div>
       <div className="p-4">
-        <h3 className="text-[15px] font-semibold tracking-tight">{recipe.title}</h3>
+        <h3 className="font-display text-[16px] font-semibold tracking-tight">{recipe.title}</h3>
         <div className="mt-2 flex items-center gap-3.5 text-xs text-muted-foreground">
           {recipe.totalMinutes != null && (
             <span className="inline-flex items-center gap-1.5">
@@ -378,84 +377,6 @@ function RecipeCard({
         </div>
       </div>
     </article>
-  );
-}
-
-function DetailModal({
-  view,
-  canEdit,
-  onClose,
-  onToggleFavorite,
-  onDelete,
-}: {
-  view: RecipeView;
-  canEdit: boolean;
-  onClose: () => void;
-  onToggleFavorite: () => void;
-  onDelete: () => void;
-}) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-3xl border border-border bg-card shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="sticky top-0 flex items-center gap-2 border-b border-border/70 bg-card/95 px-4 py-3 backdrop-blur">
-          {view.categoryName && (
-            <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
-              {view.categoryName}
-            </span>
-          )}
-          <div className="ml-auto flex items-center gap-1">
-            {canEdit && (
-              <>
-                <button
-                  type="button"
-                  onClick={onToggleFavorite}
-                  aria-label="Favori"
-                  className="grid size-9 place-items-center rounded-full hover:bg-secondary"
-                >
-                  <Heart
-                    className={cn(
-                      "size-[18px]",
-                      view.isFavorite ? "fill-klarte-pink text-klarte-pink" : "text-foreground/50",
-                    )}
-                  />
-                </button>
-                <button
-                  type="button"
-                  onClick={onDelete}
-                  aria-label="Supprimer"
-                  className="grid size-9 place-items-center rounded-full text-foreground/50 hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <Trash2 className="size-[18px]" />
-                </button>
-              </>
-            )}
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Fermer"
-              className="grid size-9 place-items-center rounded-full hover:bg-secondary"
-            >
-              <X className="size-[18px]" />
-            </button>
-          </div>
-        </div>
-        <div className="p-5">
-          <RecipeTemplate view={view} />
-        </div>
-      </div>
-    </div>
   );
 }
 

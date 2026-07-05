@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Fredoka, Inter } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { PWARegister } from "@/components/providers/pwa-register";
@@ -9,6 +9,14 @@ import "./globals.css";
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",
+});
+
+// Police d'affichage arrondie et chaleureuse pour les titres.
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["500", "600", "700"],
   display: "swap",
 });
 
@@ -42,7 +50,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans`}>
+      <body className={`${inter.variable} ${fredoka.variable} font-sans`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           {children}
           <Toaster />
