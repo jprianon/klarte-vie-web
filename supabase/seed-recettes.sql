@@ -3,6 +3,34 @@
 --   docker exec -i klarte-db psql -U klarte -d klarte < supabase/seed-recettes.sql
 -- Idempotent sur le titre : ne réinsère pas une recette déjà présente.
 
+-- Table + colonnes garanties AVANT insertion (le seed est autonome, il ne
+-- dépend pas du démarrage de l'app).
+create table if not exists recipes (
+  id            uuid primary key default gen_random_uuid(),
+  title         text not null,
+  category_name text,
+  servings      int,
+  time_minutes  int,
+  difficulty    text check (difficulty in ('facile','moyen','difficile')),
+  ingredients   jsonb not null default '[]'::jsonb,
+  steps         jsonb not null default '[]'::jsonb,
+  tags          jsonb not null default '[]'::jsonb,
+  rating        int not null default 0,
+  is_favorite   boolean not null default false,
+  raw_note      text,
+  source        text not null default 'ai' check (source in ('ai','manual')),
+  image_url     text,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+alter table recipes add column if not exists prep_minutes int;
+alter table recipes add column if not exists rest_minutes int;
+alter table recipes add column if not exists cook_minutes int;
+alter table recipes add column if not exists kcal int;
+alter table recipes add column if not exists carbs_g int;
+alter table recipes add column if not exists protein_g int;
+alter table recipes add column if not exists fat_g int;
+
 insert into recipes
   (title, category_name, servings, prep_minutes, rest_minutes, cook_minutes,
    difficulty, ingredients, steps, tags, kcal, carbs_g, protein_g, fat_g, source)
