@@ -45,6 +45,11 @@ ENV NODE_ENV=production \
 RUN groupadd --system --gid 1001 nodejs \
  && useradd  --system --uid 1001 --gid nodejs nextjs
 
+# OCR : Tesseract + langue française (import d'une recette depuis une capture).
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-fra \
+ && rm -rf /var/lib/apt/lists/*
+
 # Sortie standalone : serveur (server.js) + deps minimales + assets statiques + public/.
 COPY --from=builder            /app/public         ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

@@ -214,6 +214,20 @@ export async function clearShopping(onlyChecked: boolean): Promise<void> {
   if (!res.ok) throw new Error("shopping_clear_failed");
 }
 
+/** Import depuis une capture d'écran : OCR (Tesseract) → template. */
+export async function ocrRecipe(file: Blob): Promise<RecipeDraft> {
+  const res = await fetch("/api/recipes/ocr", {
+    method: "POST",
+    headers: { "content-type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => null);
+    throw new Error(d?.message || `Erreur ${res.status}`);
+  }
+  return (await res.json()).draft as RecipeDraft;
+}
+
 /** Libellé d'affichage d'un ingrédient (pour la liste de courses). */
 export function ingredientLabel(ing: { qty: string | null; unit: string | null; item: string }): string {
   return [ing.qty, ing.unit, ing.item].filter(Boolean).join(" ");

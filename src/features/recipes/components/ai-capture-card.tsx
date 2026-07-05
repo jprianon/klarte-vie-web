@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { Loader2, PenLine, Save, Sparkles, Wand2, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { ImagePlus, Loader2, PenLine, Save, Sparkles, Wand2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { RecipeDraft } from "@/types";
-import { createRecipe, draftToView } from "@/features/recipes/service";
+import { createRecipe, draftToView, ocrRecipe } from "@/features/recipes/service";
 import { RecipeForm } from "./recipe-form";
 import { RecipeTemplate } from "./recipe-template";
 
@@ -30,6 +30,25 @@ export function AiCaptureCard({
   const [draft, setDraft] = useState<RecipeDraft | null>(null);
   const [rawNote, setRawNote] = useState<string | null>(null);
   const [source, setSource] = useState<"ai" | "manual">("ai");
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleOcr(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setOcrLoading(true);
+    try {
+      const d = await ocrRecipe(file);
+      setDraft(d);
+      setRawNote(null);
+      setSource("ai");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Import de la capture impossible.");
+    } finally {
+      setOcrLoading(false);
+    }
+  }
 
   async function handleFormat() {
     if (note.trim().length < 3) {
@@ -146,11 +165,26 @@ export function AiCaptureCard({
             }
             className="w-full resize-y rounded-2xl border border-border bg-secondary/40 p-4 text-[13.5px] leading-relaxed text-foreground/80 placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-          <div>
-            <Button onClick={handleFormat} disabled={loading}>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button onClick={handleFormat} disabled={loading || ocrLoading}>
               {loading ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
               {loading ? "Reformatage…" : "Reformater avec l'IA"}
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={ocrLoading || loading}
+            >
+              {ocrLoading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
+              {ocrLoading ? "Lecture…" : "Importer une capture"}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleOcr}
+            />
           </div>
         </div>
       ) : (
