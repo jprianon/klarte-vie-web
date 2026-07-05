@@ -110,7 +110,7 @@ Règles :
 - prepMinutes / restMinutes / cookMinutes : entiers en minutes déduits de la note (« Préparation : 30 min », « Repos : 1 h » = 60, « Cuisson : 5 min »). null si absent.
 - servings : entier si présent (« pour 4 »), sinon null.
 - difficulty : "facile", "moyen" ou "difficile" selon le nombre d'étapes/techniques.
-- ingredients : sépare quantité (qty), unité (unit) et libellé (item). qty/unit à null s'ils manquent.
+- ingredients : pour CHAQUE ingrédient, qty = le NOMBRE seul (ex. "80", "1", "0.5"), unit = l'unité seule (ex. "g", "ml", "c.à.s", "sachet"), item = l'ingrédient seul. Exemple : "80 g de farine" → {"qty":"80","unit":"g","item":"farine"} ; "2 oeufs" → {"qty":"2","unit":null,"item":"oeufs"}. Si aucun nombre n'est indiqué, qty ET unit valent null. Ne mets JAMAIS une unité ou un mot dans qty : uniquement un nombre ou null.
 - steps : étapes courtes à l'impératif, une action par étape, dans l'ordre.
 - tags : 2 à 5 mots-clés (catégorie, type de cuisine, occasion…).
 - kcal, carbsG, proteinG, fatG : ESTIME les macros de la recette entière (nombres entiers) à partir des ingrédients. Mets null seulement si vraiment impossible à estimer.

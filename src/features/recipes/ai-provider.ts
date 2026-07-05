@@ -141,7 +141,10 @@ async function formatWithOllama(note: string): Promise<FormatResult> {
           stream: false,
           // Sorties structurées Ollama : on impose le même schéma que Claude.
           format: RECIPE_JSON_SCHEMA,
-          options: { temperature: 0 },
+          // num_ctx élargi : sinon Ollama tronque à 2048 tokens (texte OCR coupé
+          // → quantités farfelues). num_thread : exploite les 4 cœurs du VPS.
+          options: { temperature: 0, num_ctx: 4096, num_thread: 4 },
+          keep_alive: "5m",
           messages: [
             { role: "system", content: FORMAT_SYSTEM_PROMPT },
             { role: "user", content: note },
