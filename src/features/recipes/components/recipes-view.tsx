@@ -18,6 +18,7 @@ import type { RecipeDraft } from "@/types";
 import {
   deleteRecipe,
   fetchRecipes,
+  recipeImageUrl,
   recipeToView,
   toggleFavorite,
   updateRecipe,
@@ -71,6 +72,7 @@ function mockViews(): RecipeView[] {
     fatG: null,
     rating: r.rating,
     isFavorite: r.isFavorite,
+    hasImage: false,
   }));
 }
 
@@ -156,10 +158,15 @@ export function RecipesView() {
   async function handleSaveEdit(view: RecipeView, draft: RecipeDraft) {
     if (!view.id) return;
     const updated = await updateRecipe(view.id, draft);
-    const newView = recipeToView(updated);
+    const newView = { ...recipeToView(updated), hasImage: view.hasImage };
     setRecipes((rs) => rs.map((r) => (r.id === newView.id ? newView : r)));
     setDetail(newView);
     toast.success("Recette modifiée.");
+  }
+
+  function handleImageChanged(view: RecipeView, hasImage: boolean) {
+    setRecipes((rs) => rs.map((r) => (r.id === view.id ? { ...r, hasImage } : r)));
+    setDetail((d) => (d && d.id === view.id ? { ...d, hasImage } : d));
   }
 
   // ── Écran d'accueil du carnet : deux actions ────────────────────────────
@@ -266,6 +273,7 @@ export function RecipesView() {
 
       {detail && (
         <RecipeDetail
+          key={detail.id}
           view={detail}
           gradient={gradientFor(detail.categoryName)}
           canEdit={configured}
@@ -273,6 +281,7 @@ export function RecipesView() {
           onToggleFavorite={() => handleToggleFavorite(detail)}
           onDelete={() => handleDelete(detail)}
           onSaveEdit={(draft) => handleSaveEdit(detail, draft)}
+          onImageChanged={(hasImage) => handleImageChanged(detail, hasImage)}
         />
       )}
     </div>
@@ -343,6 +352,7 @@ function RecipeCard({
   onToggleFavorite: () => void;
 }) {
   const gradient = gradientFor(recipe.categoryName);
+  const [imgError, setImgError] = useState(false);
   return (
     <article
       onClick={onOpen}
@@ -352,6 +362,15 @@ function RecipeCard({
         className="relative flex h-[122px] items-end p-3"
         style={{ backgroundImage: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
       >
+        {recipe.hasImage && !imgError && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={recipeImageUrl(recipe.id)}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        )}
         {canFavorite && (
           <button
             type="button"

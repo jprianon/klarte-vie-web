@@ -1,12 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Clock, Flame, Heart, Minus, Pencil, Plus, Trash2, Users, Zap } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowLeft,
+  Camera,
+  Check,
+  Clock,
+  Flame,
+  Heart,
+  Loader2,
+  Minus,
+  Pencil,
+  Plus,
+  Trash2,
+  Users,
+  Zap,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { RecipeDraft } from "@/types";
-import { viewToDraft, type RecipeView } from "@/features/recipes/service";
+import {
+  deleteRecipeImage,
+  recipeImageUrl,
+  uploadRecipeImage,
+  viewToDraft,
+  type RecipeView,
+} from "@/features/recipes/service";
 import { RecipeForm } from "./recipe-form";
 
 /**
@@ -21,6 +41,7 @@ export function RecipeDetail({
   onToggleFavorite,
   onDelete,
   onSaveEdit,
+  onImageChanged,
 }: {
   view: RecipeView;
   gradient: [string, string];
@@ -29,12 +50,18 @@ export function RecipeDetail({
   onToggleFavorite: () => void;
   onDelete: () => void;
   onSaveEdit: (draft: RecipeDraft) => Promise<void>;
+  onImageChanged: (hasImage: boolean) => void;
 }) {
   const base = view.servings;
   const [servings, setServings] = useState(base ?? 4);
   const [checked, setChecked] = useState<Set<number>>(new Set());
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [hasImage, setHasImage] = useState(view.hasImage);
+  const [imgV, setImgV] = useState(0);
+  const [imgError, setImgError] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -51,6 +78,38 @@ export function RecipeDetail({
       toast.error(e instanceof Error ? e.message : "Modification impossible.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !view.id) return;
+    setUploading(true);
+    try {
+      const blob = await resizeImage(file).catch(() => file);
+      await uploadRecipeImage(view.id, blob);
+      setHasImage(true);
+      setImgError(false);
+      setImgV((v) => v + 1);
+      onImageChanged(true);
+      toast.success("Photo ajoutée.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Envoi de la photo impossible.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemoveImage() {
+    if (!view.id) return;
+    try {
+      await deleteRecipeImage(view.id);
+      setHasImage(false);
+      onImageChanged(false);
+      toast.success("Photo supprimée.");
+    } catch {
+      toast.error("Suppression de la photo impossible.");
     }
   }
 
@@ -99,7 +158,19 @@ export function RecipeDetail({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       {/* Héro */}
-      <div className="relative h-52 shrink-0" style={{ backgroundImage: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}>
+      <div
+        className="relative h-52 shrink-0 overflow-hidden"
+        style={{ backgroundImage: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
+      >
+        {hasImage && !imgError && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={recipeImageUrl(view.id, imgV)}
+            alt={view.title}
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={() => setImgError(true)}
+          />
+        )}
         <div
           className="absolute inset-x-0 top-0 flex items-center justify-between px-4"
           style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
@@ -118,6 +189,37 @@ export function RecipeDetail({
             </span>
           )}
         </div>
+        {canEdit && (
+          <div className="absolute bottom-3 right-3 flex items-center gap-2">
+            {hasImage && (
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                aria-label="Supprimer la photo"
+                className="grid size-10 place-items-center rounded-full bg-white/90 text-foreground shadow-sm backdrop-blur active:scale-95"
+              >
+                <Trash2 className="size-[18px]" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              aria-label={hasImage ? "Remplacer la photo" : "Ajouter une photo"}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/90 px-3.5 py-2.5 text-[13px] font-semibold text-foreground shadow-sm backdrop-blur active:scale-95 disabled:opacity-60"
+            >
+              {uploading ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
+              {hasImage ? "Remplacer" : "Photo"}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePickImage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Carte de contenu qui chevauche l'image */}
@@ -302,6 +404,23 @@ export function RecipeDetail({
         </div>
       </div>
     </div>
+  );
+}
+
+/** Réduit une image (max ~1280px, JPEG) côté navigateur avant l'envoi. */
+async function resizeImage(file: File, max = 1280, quality = 0.82): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
+  const w = Math.max(1, Math.round(bitmap.width * scale));
+  const h = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas indisponible");
+  ctx.drawImage(bitmap, 0, 0, w, h);
+  return new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob"))), "image/jpeg", quality),
   );
 }
 

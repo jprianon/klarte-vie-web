@@ -27,6 +27,7 @@ export interface RecipeView {
   fatG: number | null;
   rating: number;
   isFavorite: boolean;
+  hasImage: boolean;
 }
 
 function sumMinutes(...vals: (number | null)[]): number | null {
@@ -36,8 +37,9 @@ function sumMinutes(...vals: (number | null)[]): number | null {
 }
 
 /** Ligne base de données → vue UI. */
-export function recipeToView(r: Recipe): RecipeView {
+export function recipeToView(r: Recipe & { has_image?: boolean }): RecipeView {
   return {
+    hasImage: Boolean(r.has_image),
     id: r.id,
     title: r.title,
     categoryName: r.category_name,
@@ -80,7 +82,31 @@ export function draftToView(d: RecipeDraft): RecipeView {
     fatG: d.fatG,
     rating: 0,
     isFavorite: false,
+    hasImage: false,
   };
+}
+
+/** URL de la photo d'une recette (le paramètre `v` casse le cache après upload). */
+export function recipeImageUrl(id: string | null, version = 0): string {
+  if (!id) return "";
+  return `/api/recipes/${id}/image${version ? `?v=${version}` : ""}`;
+}
+
+export async function uploadRecipeImage(id: string, file: Blob): Promise<void> {
+  const res = await fetch(`/api/recipes/${id}/image`, {
+    method: "POST",
+    headers: { "content-type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => null);
+    throw new Error(d?.message || `Erreur ${res.status}`);
+  }
+}
+
+export async function deleteRecipeImage(id: string): Promise<void> {
+  const res = await fetch(`/api/recipes/${id}/image`, { method: "DELETE" });
+  if (!res.ok) throw new Error("delete_image_failed");
 }
 
 /** Liste + indicateur « base branchée ? ». */

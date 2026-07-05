@@ -54,7 +54,13 @@ async function ready(): Promise<Pool> {
          alter table recipes add column if not exists kcal int;
          alter table recipes add column if not exists carbs_g int;
          alter table recipes add column if not exists protein_g int;
-         alter table recipes add column if not exists fat_g int;`,
+         alter table recipes add column if not exists fat_g int;
+         create table if not exists recipe_images (
+           recipe_id    uuid primary key references recipes(id) on delete cascade,
+           content_type text not null,
+           data         bytea not null,
+           updated_at   timestamptz not null default now()
+         );`,
       )
       .then(() => undefined)
       .catch((e) => {
@@ -66,10 +72,43 @@ async function ready(): Promise<Pool> {
   return p;
 }
 
-export async function dbListRecipes(): Promise<Recipe[]> {
+/** Ligne recette + indicateur de présence d'une photo (sans charger l'image). */
+export type RecipeRow = Recipe & { has_image: boolean };
+
+export async function dbListRecipes(): Promise<RecipeRow[]> {
   const p = await ready();
-  const { rows } = await p.query<Recipe>("select * from recipes order by created_at desc");
+  const { rows } = await p.query<RecipeRow>(
+    `select r.*, (ri.recipe_id is not null) as has_image
+       from recipes r
+       left join recipe_images ri on ri.recipe_id = r.id
+      order by r.created_at desc`,
+  );
   return rows;
+}
+
+export async function dbGetImage(id: string): Promise<{ contentType: string; data: Buffer } | null> {
+  const p = await ready();
+  const { rows } = await p.query<{ content_type: string; data: Buffer }>(
+    "select content_type, data from recipe_images where recipe_id = $1",
+    [id],
+  );
+  const row = rows[0];
+  return row ? { contentType: row.content_type, data: row.data } : null;
+}
+
+export async function dbSetImage(id: string, contentType: string, data: Buffer): Promise<void> {
+  const p = await ready();
+  await p.query(
+    `insert into recipe_images (recipe_id, content_type, data, updated_at)
+       values ($1, $2, $3, now())
+     on conflict (recipe_id) do update set content_type = $2, data = $3, updated_at = now()`,
+    [id, contentType, data],
+  );
+}
+
+export async function dbDeleteImage(id: string): Promise<void> {
+  const p = await ready();
+  await p.query("delete from recipe_images where recipe_id = $1", [id]);
 }
 
 export async function dbCreateRecipe(
