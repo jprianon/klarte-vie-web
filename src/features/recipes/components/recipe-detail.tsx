@@ -12,6 +12,7 @@ import {
   Minus,
   Pencil,
   Plus,
+  ShoppingCart,
   Trash2,
   Users,
   Zap,
@@ -42,6 +43,7 @@ export function RecipeDetail({
   onDelete,
   onSaveEdit,
   onImageChanged,
+  onAddToShopping,
 }: {
   view: RecipeView;
   gradient: [string, string];
@@ -51,6 +53,7 @@ export function RecipeDetail({
   onDelete: () => void;
   onSaveEdit: (draft: RecipeDraft) => Promise<void>;
   onImageChanged: (hasImage: boolean) => void;
+  onAddToShopping: (labels: string[]) => void;
 }) {
   const base = view.servings;
   const [servings, setServings] = useState(base ?? 4);
@@ -272,8 +275,25 @@ export function RecipeDetail({
           {/* Ingrédients */}
           <div className="mt-7 flex items-center justify-between gap-3 border-t border-border pt-6">
             <h2 className="font-display text-[20px] font-semibold tracking-tight">Ingrédients</h2>
-            {base != null && (
-              <div className="flex items-center gap-2 rounded-full bg-secondary px-2 py-1.5">
+            <div className="flex items-center gap-2">
+              {view.ingredients.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onAddToShopping(
+                      view.ingredients.map((ing) =>
+                        [scaleQty(ing.qty, factor), ing.unit, ing.item].filter(Boolean).join(" "),
+                      ),
+                    )
+                  }
+                  aria-label="Ajouter aux courses"
+                  className="grid size-9 place-items-center rounded-full bg-secondary text-foreground/70 hover:text-foreground"
+                >
+                  <ShoppingCart className="size-[18px]" />
+                </button>
+              )}
+              {base != null && (
+                <div className="flex items-center gap-2 rounded-full bg-secondary px-2 py-1.5">
                 <button
                   type="button"
                   onClick={() => setServings((s) => Math.max(1, s - 1))}
@@ -294,8 +314,9 @@ export function RecipeDetail({
                 >
                   <Plus className="size-4" />
                 </button>
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
 
           {view.ingredients.length === 0 ? (

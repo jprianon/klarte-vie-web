@@ -109,6 +109,116 @@ export async function deleteRecipeImage(id: string): Promise<void> {
   if (!res.ok) throw new Error("delete_image_failed");
 }
 
+/* ── Dossiers ────────────────────────────────────────────────────────────── */
+
+export interface FolderSummary {
+  id: string;
+  name: string;
+  count: number;
+}
+
+export async function fetchFolders(): Promise<{ configured: boolean; folders: FolderSummary[] }> {
+  const res = await fetch("/api/folders", { cache: "no-store" });
+  if (!res.ok) throw new Error("folders_failed");
+  const data = await res.json();
+  return { configured: Boolean(data.configured), folders: (data.folders ?? []) as FolderSummary[] };
+}
+
+export async function createFolder(name: string): Promise<FolderSummary> {
+  const res = await fetch("/api/folders", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error("create_folder_failed");
+  return (await res.json()).folder as FolderSummary;
+}
+
+export async function deleteFolder(id: string): Promise<void> {
+  const res = await fetch(`/api/folders/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("delete_folder_failed");
+}
+
+export async function fetchFolderRecipes(
+  folderId: string,
+): Promise<(Recipe & { has_image?: boolean })[]> {
+  const res = await fetch(`/api/folders/${folderId}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("folder_recipes_failed");
+  return (await res.json()).recipes ?? [];
+}
+
+export async function fetchRecipeFolderIds(recipeId: string): Promise<string[]> {
+  const res = await fetch(`/api/recipes/${recipeId}/folders`, { cache: "no-store" });
+  if (!res.ok) throw new Error("recipe_folders_failed");
+  return (await res.json()).folderIds ?? [];
+}
+
+export async function addRecipeToFolder(folderId: string, recipeId: string): Promise<void> {
+  const res = await fetch(`/api/folders/${folderId}/recipes`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ recipeId }),
+  });
+  if (!res.ok) throw new Error("add_to_folder_failed");
+}
+
+export async function removeRecipeFromFolder(folderId: string, recipeId: string): Promise<void> {
+  const res = await fetch(`/api/folders/${folderId}/recipes`, {
+    method: "DELETE",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ recipeId }),
+  });
+  if (!res.ok) throw new Error("remove_from_folder_failed");
+}
+
+/* ── Liste de courses ────────────────────────────────────────────────────── */
+
+export interface ShoppingItem {
+  id: string;
+  label: string;
+  checked: boolean;
+}
+
+export async function fetchShopping(): Promise<{ configured: boolean; items: ShoppingItem[] }> {
+  const res = await fetch("/api/shopping", { cache: "no-store" });
+  if (!res.ok) throw new Error("shopping_failed");
+  const data = await res.json();
+  return { configured: Boolean(data.configured), items: (data.items ?? []) as ShoppingItem[] };
+}
+
+export async function addShopping(labels: string[]): Promise<void> {
+  const res = await fetch("/api/shopping", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ labels }),
+  });
+  if (!res.ok) throw new Error("add_shopping_failed");
+}
+
+export async function setShoppingChecked(id: string, checked: boolean): Promise<void> {
+  const res = await fetch(`/api/shopping/${id}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ checked }),
+  });
+  if (!res.ok) throw new Error("shopping_check_failed");
+}
+
+export async function deleteShopping(id: string): Promise<void> {
+  const res = await fetch(`/api/shopping/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("shopping_delete_failed");
+}
+
+export async function clearShopping(onlyChecked: boolean): Promise<void> {
+  const res = await fetch(`/api/shopping${onlyChecked ? "?checked=1" : ""}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("shopping_clear_failed");
+}
+
+/** Libellé d'affichage d'un ingrédient (pour la liste de courses). */
+export function ingredientLabel(ing: { qty: string | null; unit: string | null; item: string }): string {
+  return [ing.qty, ing.unit, ing.item].filter(Boolean).join(" ");
+}
+
 /** Liste + indicateur « base branchée ? ». */
 export async function fetchRecipes(): Promise<{ configured: boolean; recipes: Recipe[] }> {
   const res = await fetch("/api/recipes", { cache: "no-store" });

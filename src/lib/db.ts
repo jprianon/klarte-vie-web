@@ -60,6 +60,22 @@ async function ready(): Promise<Pool> {
            content_type text not null,
            data         bytea not null,
            updated_at   timestamptz not null default now()
+         );
+         create table if not exists folders (
+           id         uuid primary key default gen_random_uuid(),
+           name       text not null,
+           created_at timestamptz not null default now()
+         );
+         create table if not exists folder_recipes (
+           folder_id uuid references folders(id) on delete cascade,
+           recipe_id uuid references recipes(id) on delete cascade,
+           primary key (folder_id, recipe_id)
+         );
+         create table if not exists shopping_items (
+           id         uuid primary key default gen_random_uuid(),
+           label      text not null,
+           checked    boolean not null default false,
+           created_at timestamptz not null default now()
          );`,
       )
       .then(() => undefined)
@@ -109,6 +125,122 @@ export async function dbSetImage(id: string, contentType: string, data: Buffer):
 export async function dbDeleteImage(id: string): Promise<void> {
   const p = await ready();
   await p.query("delete from recipe_images where recipe_id = $1", [id]);
+}
+
+/* ── Dossiers (collections) ──────────────────────────────────────────────── */
+
+export interface FolderSummary {
+  id: string;
+  name: string;
+  count: number;
+}
+
+export async function dbListFolders(): Promise<FolderSummary[]> {
+  const p = await ready();
+  const { rows } = await p.query<FolderSummary>(
+    `select f.id, f.name, count(fr.recipe_id)::int as count
+       from folders f
+       left join folder_recipes fr on fr.folder_id = f.id
+      group by f.id
+      order by f.created_at desc`,
+  );
+  return rows;
+}
+
+export async function dbCreateFolder(name: string): Promise<FolderSummary> {
+  const p = await ready();
+  const { rows } = await p.query<{ id: string; name: string }>(
+    "insert into folders (name) values ($1) returning id, name",
+    [name],
+  );
+  const f = rows[0];
+  if (!f) throw new Error("Création du dossier impossible.");
+  return { id: f.id, name: f.name, count: 0 };
+}
+
+export async function dbDeleteFolder(id: string): Promise<void> {
+  const p = await ready();
+  await p.query("delete from folders where id = $1", [id]);
+}
+
+export async function dbFolderRecipes(folderId: string): Promise<RecipeRow[]> {
+  const p = await ready();
+  const { rows } = await p.query<RecipeRow>(
+    `select r.*, (ri.recipe_id is not null) as has_image
+       from folder_recipes fr
+       join recipes r on r.id = fr.recipe_id
+       left join recipe_images ri on ri.recipe_id = r.id
+      where fr.folder_id = $1
+      order by r.created_at desc`,
+    [folderId],
+  );
+  return rows;
+}
+
+export async function dbRecipeFolderIds(recipeId: string): Promise<string[]> {
+  const p = await ready();
+  const { rows } = await p.query<{ folder_id: string }>(
+    "select folder_id from folder_recipes where recipe_id = $1",
+    [recipeId],
+  );
+  return rows.map((r) => r.folder_id);
+}
+
+export async function dbAddToFolder(folderId: string, recipeId: string): Promise<void> {
+  const p = await ready();
+  await p.query(
+    "insert into folder_recipes (folder_id, recipe_id) values ($1, $2) on conflict do nothing",
+    [folderId, recipeId],
+  );
+}
+
+export async function dbRemoveFromFolder(folderId: string, recipeId: string): Promise<void> {
+  const p = await ready();
+  await p.query("delete from folder_recipes where folder_id = $1 and recipe_id = $2", [
+    folderId,
+    recipeId,
+  ]);
+}
+
+/* ── Liste de courses ────────────────────────────────────────────────────── */
+
+export interface ShoppingItem {
+  id: string;
+  label: string;
+  checked: boolean;
+}
+
+export async function dbListShopping(): Promise<ShoppingItem[]> {
+  const p = await ready();
+  const { rows } = await p.query<ShoppingItem>(
+    "select id, label, checked from shopping_items order by checked asc, created_at asc",
+  );
+  return rows;
+}
+
+export async function dbAddShopping(labels: string[]): Promise<void> {
+  const clean = labels.map((l) => l.trim()).filter(Boolean);
+  if (clean.length === 0) return;
+  const p = await ready();
+  const values = clean.map((_, i) => `($${i + 1})`).join(", ");
+  await p.query(`insert into shopping_items (label) values ${values}`, clean);
+}
+
+export async function dbSetShoppingChecked(id: string, checked: boolean): Promise<void> {
+  const p = await ready();
+  await p.query("update shopping_items set checked = $2 where id = $1", [id, checked]);
+}
+
+export async function dbDeleteShopping(id: string): Promise<void> {
+  const p = await ready();
+  await p.query("delete from shopping_items where id = $1", [id]);
+}
+
+export async function dbClearShopping(onlyChecked: boolean): Promise<void> {
+  const p = await ready();
+  await p.query(
+    onlyChecked ? "delete from shopping_items where checked = true" : "delete from shopping_items",
+  );
 }
 
 export async function dbCreateRecipe(
