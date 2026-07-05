@@ -6,13 +6,16 @@ import {
   BookOpen,
   ChevronRight,
   Clock,
+  Flame,
   Heart,
   Loader2,
   Plus,
+  Trash2,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
-import { cn, formatDuration } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { RecipeDraft } from "@/types";
 import {
@@ -27,7 +30,6 @@ import {
 import { MOCK_CATEGORIES, MOCK_RECIPES } from "@/features/recipes/mock";
 import { AiCaptureCard } from "./ai-capture-card";
 import { RecipeDetail } from "./recipe-detail";
-import { Stars } from "./stars";
 
 type Mode = "home" | "add" | "browse";
 const ALL = "all";
@@ -211,7 +213,7 @@ export function RecipesView() {
 
   // ── Écran de consultation ───────────────────────────────────────────────
   return (
-    <div className="mx-auto w-full max-w-5xl px-5 py-6 md:px-8">
+    <div className="mx-auto w-full max-w-2xl px-5 pb-28 pt-6">
       <BackHeader title="Mes recettes" onBack={() => setMode("home")} />
 
       {!configured && (
@@ -241,6 +243,12 @@ export function RecipesView() {
         </div>
       )}
 
+      {!loading && recipes.length > 0 && (
+        <h2 className="mb-3 font-display text-lg font-bold tracking-tight">
+          {recipes.length} recette{recipes.length > 1 ? "s" : ""}
+        </h2>
+      )}
+
       {loading ? (
         <div className="grid place-items-center py-16 text-muted-foreground">
           <Loader2 className="size-6 animate-spin" />
@@ -258,18 +266,29 @@ export function RecipesView() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="flex flex-col gap-3.5">
           {filtered.map((r) => (
-            <RecipeCard
+            <RecipeRow
               key={r.id}
               recipe={r}
-              canFavorite={configured}
+              canEdit={configured}
               onOpen={() => setDetail(r)}
               onToggleFavorite={() => handleToggleFavorite(r)}
+              onDelete={() => handleDelete(r)}
             />
           ))}
         </div>
       )}
+
+      <button
+        type="button"
+        onClick={() => setMode("add")}
+        aria-label="Ajouter une recette"
+        className="fixed bottom-6 right-6 z-30 grid size-14 place-items-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 active:scale-95"
+        style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <Plus className="size-7" />
+      </button>
 
       {detail && (
         <RecipeDetail
@@ -340,26 +359,28 @@ function BackHeader({ title, onBack }: { title: string; onBack: () => void }) {
   );
 }
 
-function RecipeCard({
+function RecipeRow({
   recipe,
-  canFavorite,
+  canEdit,
   onOpen,
   onToggleFavorite,
+  onDelete,
 }: {
   recipe: RecipeView;
-  canFavorite: boolean;
+  canEdit: boolean;
   onOpen: () => void;
   onToggleFavorite: () => void;
+  onDelete: () => void;
 }) {
   const gradient = gradientFor(recipe.categoryName);
   const [imgError, setImgError] = useState(false);
   return (
     <article
       onClick={onOpen}
-      className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-shadow hover:shadow-lg"
+      className="group flex cursor-pointer gap-3.5 rounded-2xl border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md"
     >
       <div
-        className="relative flex h-[122px] items-end p-3"
+        className="relative size-[92px] shrink-0 overflow-hidden rounded-xl"
         style={{ backgroundImage: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
       >
         {recipe.hasImage && !imgError && (
@@ -371,7 +392,24 @@ function RecipeCard({
             onError={() => setImgError(true)}
           />
         )}
-        {canFavorite && (
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <h3 className="line-clamp-2 font-display text-[15.5px] font-semibold leading-tight tracking-tight">
+          {recipe.title}
+        </h3>
+        {recipe.categoryName && (
+          <p className="mt-0.5 truncate text-[12.5px] text-muted-foreground">{recipe.categoryName}</p>
+        )}
+        <div className="mt-auto flex flex-wrap gap-1.5 pt-2">
+          {recipe.totalMinutes != null && <MiniPill icon={Clock}>{recipe.totalMinutes}min</MiniPill>}
+          {recipe.servings != null && <MiniPill icon={Users}>{recipe.servings}x</MiniPill>}
+          {recipe.kcal != null && <MiniPill icon={Flame}>{recipe.kcal}</MiniPill>}
+        </div>
+      </div>
+
+      {canEdit && (
+        <div className="flex flex-col items-center justify-center gap-1">
           <button
             type="button"
             onClick={(e) => {
@@ -379,35 +417,35 @@ function RecipeCard({
               onToggleFavorite();
             }}
             aria-label={recipe.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-            className="absolute right-2.5 top-2.5 grid size-7 place-items-center rounded-full bg-white/85 backdrop-blur-sm transition-transform hover:scale-105"
+            className="grid size-9 place-items-center rounded-full text-foreground/40 hover:bg-secondary"
           >
             <Heart
-              className={cn(
-                "size-[15px]",
-                recipe.isFavorite ? "fill-klarte-pink text-klarte-pink" : "text-foreground/50",
-              )}
+              className={cn("size-[18px]", recipe.isFavorite && "fill-klarte-pink text-klarte-pink")}
             />
           </button>
-        )}
-        {recipe.categoryName && (
-          <span className="rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
-            {recipe.categoryName}
-          </span>
-        )}
-      </div>
-      <div className="p-4">
-        <h3 className="font-display text-[16px] font-semibold tracking-tight">{recipe.title}</h3>
-        <div className="mt-2 flex items-center gap-3.5 text-xs text-muted-foreground">
-          {recipe.totalMinutes != null && (
-            <span className="inline-flex items-center gap-1.5">
-              <Clock className="size-3.5" />
-              {formatDuration(recipe.totalMinutes)}
-            </span>
-          )}
-          {recipe.rating > 0 && <Stars value={recipe.rating} className="text-xs" />}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm("Supprimer cette recette ?")) onDelete();
+            }}
+            aria-label="Supprimer"
+            className="grid size-9 place-items-center rounded-full text-foreground/40 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="size-[18px]" />
+          </button>
         </div>
-      </div>
+      )}
     </article>
+  );
+}
+
+function MiniPill({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-primary/[0.08] px-2.5 py-1 text-[11.5px] font-semibold text-foreground/80">
+      <Icon className="size-3 text-primary" />
+      {children}
+    </span>
   );
 }
 
