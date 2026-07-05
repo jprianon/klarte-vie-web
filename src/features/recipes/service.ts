@@ -122,3 +122,37 @@ export async function deleteRecipe(id: string): Promise<void> {
   const res = await fetch(`/api/recipes/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("delete_failed");
 }
+
+/** Vue → brouillon éditable (pour pré-remplir le formulaire de modification). */
+export function viewToDraft(v: RecipeView): RecipeDraft {
+  return {
+    title: v.title,
+    categoryName: v.categoryName ?? "",
+    servings: v.servings,
+    prepMinutes: v.prepMinutes,
+    restMinutes: v.restMinutes,
+    cookMinutes: v.cookMinutes,
+    difficulty: v.difficulty,
+    ingredients: v.ingredients,
+    steps: v.steps,
+    tags: v.tags,
+    kcal: v.kcal,
+    carbsG: v.carbsG,
+    proteinG: v.proteinG,
+    fatG: v.fatG,
+  };
+}
+
+export async function updateRecipe(id: string, draft: RecipeDraft): Promise<Recipe> {
+  const res = await fetch(`/api/recipes/${id}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ draft }),
+  });
+  if (!res.ok) {
+    const d = await res.json().catch(() => null);
+    throw new Error(d?.message || `Erreur ${res.status}`);
+  }
+  const data = await res.json();
+  return data.recipe as Recipe;
+}

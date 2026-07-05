@@ -108,6 +108,38 @@ export async function dbCreateRecipe(
   return created;
 }
 
+export async function dbUpdateRecipe(id: string, draft: RecipeDraft): Promise<Recipe> {
+  const p = await ready();
+  const { rows } = await p.query<Recipe>(
+    `update recipes set
+       title = $2, category_name = $3, servings = $4, prep_minutes = $5, rest_minutes = $6,
+       cook_minutes = $7, difficulty = $8, ingredients = $9::jsonb, steps = $10::jsonb,
+       tags = $11::jsonb, kcal = $12, carbs_g = $13, protein_g = $14, fat_g = $15, updated_at = now()
+     where id = $1
+     returning *`,
+    [
+      id,
+      draft.title,
+      draft.categoryName,
+      draft.servings,
+      draft.prepMinutes,
+      draft.restMinutes,
+      draft.cookMinutes,
+      draft.difficulty,
+      JSON.stringify(draft.ingredients),
+      JSON.stringify(draft.steps),
+      JSON.stringify(draft.tags),
+      draft.kcal,
+      draft.carbsG,
+      draft.proteinG,
+      draft.fatG,
+    ],
+  );
+  const updated = rows[0];
+  if (!updated) throw new Error("Recette introuvable.");
+  return updated;
+}
+
 export async function dbToggleFavorite(id: string, next: boolean): Promise<void> {
   const p = await ready();
   await p.query("update recipes set is_favorite = $1, updated_at = now() where id = $2", [next, id]);

@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Clock, Flame, Heart, Minus, Plus, Trash2, Users, Zap } from "lucide-react";
+import { ArrowLeft, Check, Clock, Flame, Heart, Minus, Pencil, Plus, Trash2, Users, Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { RecipeView } from "@/features/recipes/service";
+import { toast } from "sonner";
+import type { RecipeDraft } from "@/types";
+import { viewToDraft, type RecipeView } from "@/features/recipes/service";
+import { RecipeForm } from "./recipe-form";
 
 /**
  * Écran « Recette détaillée » — plein écran, image en héro, carte arrondie,
@@ -17,6 +20,7 @@ export function RecipeDetail({
   onClose,
   onToggleFavorite,
   onDelete,
+  onSaveEdit,
 }: {
   view: RecipeView;
   gradient: [string, string];
@@ -24,16 +28,62 @@ export function RecipeDetail({
   onClose: () => void;
   onToggleFavorite: () => void;
   onDelete: () => void;
+  onSaveEdit: (draft: RecipeDraft) => Promise<void>;
 }) {
   const base = view.servings;
   const [servings, setServings] = useState(base ?? 4);
   const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  async function handleEditSubmit(draft: RecipeDraft) {
+    setSaving(true);
+    try {
+      await onSaveEdit(draft);
+      setEditing(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Modification impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col bg-background">
+        <div
+          className="flex items-center gap-3 border-b border-border px-5 pb-4"
+          style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
+        >
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            aria-label="Annuler"
+            className="grid size-9 place-items-center rounded-full border border-border bg-card text-foreground/70 hover:text-foreground"
+          >
+            <ArrowLeft className="size-[18px]" />
+          </button>
+          <h1 className="font-display text-xl font-bold tracking-tight">Modifier la recette</h1>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 pb-24 pt-5">
+          <div className="mx-auto w-full max-w-2xl">
+            <RecipeForm
+              initial={viewToDraft(view)}
+              submitLabel="Enregistrer"
+              submitting={saving}
+              onSubmit={handleEditSubmit}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const factor = base && base > 0 ? servings / base : 1;
 
@@ -78,14 +128,24 @@ export function RecipeDetail({
               {view.title}
             </h1>
             {canEdit && (
-              <button
-                type="button"
-                onClick={onToggleFavorite}
-                aria-label={view.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-                className="grid size-12 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-md active:scale-95"
-              >
-                <Heart className={cn("size-6", view.isFavorite && "fill-current")} />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  aria-label="Modifier"
+                  className="grid size-12 shrink-0 place-items-center rounded-full bg-secondary text-foreground active:scale-95"
+                >
+                  <Pencil className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={onToggleFavorite}
+                  aria-label={view.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+                  className="grid size-12 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-md active:scale-95"
+                >
+                  <Heart className={cn("size-6", view.isFavorite && "fill-current")} />
+                </button>
+              </>
             )}
           </div>
 

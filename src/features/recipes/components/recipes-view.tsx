@@ -14,11 +14,13 @@ import {
 
 import { cn, formatDuration } from "@/lib/utils";
 import { toast } from "sonner";
+import type { RecipeDraft } from "@/types";
 import {
   deleteRecipe,
   fetchRecipes,
   recipeToView,
   toggleFavorite,
+  updateRecipe,
   type RecipeView,
 } from "@/features/recipes/service";
 import { MOCK_CATEGORIES, MOCK_RECIPES } from "@/features/recipes/mock";
@@ -151,6 +153,15 @@ export function RecipesView() {
     setMode("browse");
   }
 
+  async function handleSaveEdit(view: RecipeView, draft: RecipeDraft) {
+    if (!view.id) return;
+    const updated = await updateRecipe(view.id, draft);
+    const newView = recipeToView(updated);
+    setRecipes((rs) => rs.map((r) => (r.id === newView.id ? newView : r)));
+    setDetail(newView);
+    toast.success("Recette modifiée.");
+  }
+
   // ── Écran d'accueil du carnet : deux actions ────────────────────────────
   if (mode === "home") {
     return (
@@ -261,6 +272,7 @@ export function RecipesView() {
           onClose={() => setDetail(null)}
           onToggleFavorite={() => handleToggleFavorite(detail)}
           onDelete={() => handleDelete(detail)}
+          onSaveEdit={(draft) => handleSaveEdit(detail, draft)}
         />
       )}
     </div>
