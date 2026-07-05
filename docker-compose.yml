@@ -56,6 +56,9 @@ services:
     # Garde-fou mémoire : le VPS n'a pas de swap, on borne Ollama pour ne jamais
     # menacer les autres conteneurs. Un modèle 3B tient largement sous cette limite.
     mem_limit: 5g
+    # Réserve 1 cœur (sur 4) au site + la base : pendant la génération (CPU à
+    # fond), l'app reste réactive. Génération un peu plus lente, mais pas de gel.
+    cpus: 3.0
 
 volumes:
   db-data:

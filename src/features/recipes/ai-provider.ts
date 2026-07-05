@@ -144,7 +144,9 @@ async function formatWithOllama(note: string): Promise<FormatResult> {
           // num_ctx élargi : sinon Ollama tronque à 2048 tokens (texte OCR coupé
           // → quantités farfelues). num_thread : exploite les 4 cœurs du VPS.
           // (Le maintien en mémoire est piloté par OLLAMA_KEEP_ALIVE côté conteneur.)
-          options: { temperature: 0, num_ctx: 4096, num_thread: 4 },
+          // num_thread 3 : on laisse 1 cœur libre pour le site + la base pendant
+          // la génération (cf. limite `cpus` du conteneur ollama).
+          options: { temperature: 0, num_ctx: 4096, num_thread: 3 },
           messages: [
             { role: "system", content: FORMAT_SYSTEM_PROMPT },
             { role: "user", content: note },
