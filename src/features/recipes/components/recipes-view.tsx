@@ -57,11 +57,18 @@ function mockViews(): RecipeView[] {
     title: r.title,
     categoryName: catName.get(r.categoryId) ?? null,
     servings: null,
-    timeMinutes: r.timeMinutes,
+    prepMinutes: r.timeMinutes,
+    restMinutes: null,
+    cookMinutes: null,
+    totalMinutes: r.timeMinutes,
     difficulty: null,
     ingredients: [],
     steps: [],
     tags: [],
+    kcal: null,
+    carbsG: null,
+    proteinG: null,
+    fatG: null,
     rating: r.rating,
     isFavorite: r.isFavorite,
   }));
@@ -361,10 +368,10 @@ function RecipeCard({
       <div className="p-4">
         <h3 className="text-[15px] font-semibold tracking-tight">{recipe.title}</h3>
         <div className="mt-2 flex items-center gap-3.5 text-xs text-muted-foreground">
-          {recipe.timeMinutes != null && (
+          {recipe.totalMinutes != null && (
             <span className="inline-flex items-center gap-1.5">
               <Clock className="size-3.5" />
-              {formatDuration(recipe.timeMinutes)}
+              {formatDuration(recipe.totalMinutes)}
             </span>
           )}
           {recipe.rating > 0 && <Stars value={recipe.rating} className="text-xs" />}

@@ -174,7 +174,13 @@ function ManualForm({ onSubmit }: { onSubmit: (d: RecipeDraft) => void }) {
   const [title, setTitle] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [servings, setServings] = useState("");
-  const [timeMinutes, setTimeMinutes] = useState("");
+  const [prep, setPrep] = useState("");
+  const [rest, setRest] = useState("");
+  const [cook, setCook] = useState("");
+  const [kcal, setKcal] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [protein, setProtein] = useState("");
+  const [fat, setFat] = useState("");
   const [difficulty, setDifficulty] = useState<RecipeDifficulty>("facile");
   const [ingredientsText, setIngredientsText] = useState("");
   const [stepsText, setStepsText] = useState("");
@@ -185,11 +191,14 @@ function ManualForm({ onSubmit }: { onSubmit: (d: RecipeDraft) => void }) {
       toast.error("Donne au moins un titre.");
       return;
     }
+    const num = (s: string) => (s.trim() ? Number(s) : null);
     const draft: RecipeDraft = {
       title: title.trim(),
       categoryName: categoryName.trim() || "Plats",
-      servings: servings ? Number(servings) : null,
-      timeMinutes: timeMinutes ? Number(timeMinutes) : null,
+      servings: num(servings),
+      prepMinutes: num(prep),
+      restMinutes: num(rest),
+      cookMinutes: num(cook),
       difficulty,
       ingredients: ingredientsText
         .split("\n")
@@ -204,6 +213,10 @@ function ManualForm({ onSubmit }: { onSubmit: (d: RecipeDraft) => void }) {
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean),
+      kcal: num(kcal),
+      carbsG: num(carbs),
+      proteinG: num(protein),
+      fatG: num(fat),
     };
     onSubmit(draft);
   }
@@ -237,14 +250,28 @@ function ManualForm({ onSubmit }: { onSubmit: (d: RecipeDraft) => void }) {
             onChange={(e) => setServings(e.target.value)}
           />
         </Field>
-        <Field label="Temps (min)">
-          <input
-            type="number"
-            min={1}
-            className={inputCls}
-            value={timeMinutes}
-            onChange={(e) => setTimeMinutes(e.target.value)}
-          />
+        <Field label="Prépa (min)">
+          <input type="number" min={0} className={inputCls} value={prep} onChange={(e) => setPrep(e.target.value)} />
+        </Field>
+        <Field label="Repos (min)">
+          <input type="number" min={0} className={inputCls} value={rest} onChange={(e) => setRest(e.target.value)} />
+        </Field>
+        <Field label="Cuisson (min)">
+          <input type="number" min={0} className={inputCls} value={cook} onChange={(e) => setCook(e.target.value)} />
+        </Field>
+      </div>
+      <div className="grid grid-cols-4 gap-3">
+        <Field label="kcal">
+          <input type="number" min={0} className={inputCls} value={kcal} onChange={(e) => setKcal(e.target.value)} />
+        </Field>
+        <Field label="Gluc. g">
+          <input type="number" min={0} className={inputCls} value={carbs} onChange={(e) => setCarbs(e.target.value)} />
+        </Field>
+        <Field label="Prot. g">
+          <input type="number" min={0} className={inputCls} value={protein} onChange={(e) => setProtein(e.target.value)} />
+        </Field>
+        <Field label="Lip. g">
+          <input type="number" min={0} className={inputCls} value={fat} onChange={(e) => setFat(e.target.value)} />
         </Field>
       </div>
       <Field label="Difficulté">

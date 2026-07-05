@@ -4,8 +4,8 @@ import type { Recipe, RecipeDraft } from "@/types";
 
 /**
  * Accès base de données — Postgres auto-hébergé sur le VPS (conteneur `db`).
- * Uniquement côté serveur (routes /api/recipes). La table est créée à la volée
- * au premier accès : aucune migration manuelle à lancer.
+ * Uniquement côté serveur (routes /api/recipes). La table est créée et migrée à
+ * la volée au premier accès : aucune migration manuelle à lancer.
  */
 
 let pool: Pool | undefined;
@@ -23,7 +23,7 @@ function getPool(): Pool {
   return pool;
 }
 
-/** Garantit l'existence de la table (idempotent, exécuté une seule fois). */
+/** Garantit l'existence de la table + des colonnes (idempotent). */
 async function ready(): Promise<Pool> {
   const p = getPool();
   if (!schemaReady) {
@@ -47,12 +47,18 @@ async function ready(): Promise<Pool> {
            created_at    timestamptz not null default now(),
            updated_at    timestamptz not null default now()
          );
-         create index if not exists recipes_created_at_idx on recipes (created_at desc);`,
+         create index if not exists recipes_created_at_idx on recipes (created_at desc);
+         alter table recipes add column if not exists prep_minutes int;
+         alter table recipes add column if not exists rest_minutes int;
+         alter table recipes add column if not exists cook_minutes int;
+         alter table recipes add column if not exists kcal int;
+         alter table recipes add column if not exists carbs_g int;
+         alter table recipes add column if not exists protein_g int;
+         alter table recipes add column if not exists fat_g int;`,
       )
       .then(() => undefined)
       .catch((e) => {
-        // Réinitialise pour retenter au prochain appel si l'init a échoué.
-        schemaReady = undefined;
+        schemaReady = undefined; // retente au prochain appel si l'init a échoué
         throw e;
       });
   }
@@ -74,18 +80,25 @@ export async function dbCreateRecipe(
   const p = await ready();
   const { rows } = await p.query<Recipe>(
     `insert into recipes
-       (title, category_name, servings, time_minutes, difficulty, ingredients, steps, tags, raw_note, source)
-     values ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb, $9, $10)
+       (title, category_name, servings, prep_minutes, rest_minutes, cook_minutes,
+        difficulty, ingredients, steps, tags, kcal, carbs_g, protein_g, fat_g, raw_note, source)
+     values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13, $14, $15, $16)
      returning *`,
     [
       draft.title,
       draft.categoryName,
       draft.servings,
-      draft.timeMinutes,
+      draft.prepMinutes,
+      draft.restMinutes,
+      draft.cookMinutes,
       draft.difficulty,
       JSON.stringify(draft.ingredients),
       JSON.stringify(draft.steps),
       JSON.stringify(draft.tags),
+      draft.kcal,
+      draft.carbsG,
+      draft.proteinG,
+      draft.fatG,
       rawNote,
       source,
     ],

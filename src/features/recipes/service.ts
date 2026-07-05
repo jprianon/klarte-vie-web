@@ -2,24 +2,37 @@ import type { Recipe, RecipeDraft, RecipeDifficulty, RecipeIngredient } from "@/
 
 /**
  * Accès aux recettes côté navigateur : appelle les routes /api/recipes, qui
- * elles-mêmes tapent le Postgres local (cf. src/lib/db.ts). Le navigateur ne
- * parle jamais directement à la base.
+ * tapent le Postgres local (cf. src/lib/db.ts). Le navigateur ne parle jamais
+ * directement à la base.
  */
 
-/** Vue unifiée consommée par l'UI : sert autant pour un brouillon IA que pour
- *  une recette enregistrée, afin que le rendu soit strictement identique. */
+/** Vue unifiée consommée par l'UI (brouillon IA OU recette enregistrée). */
 export interface RecipeView {
   id: string | null;
   title: string;
   categoryName: string | null;
   servings: number | null;
-  timeMinutes: number | null;
+  prepMinutes: number | null;
+  restMinutes: number | null;
+  cookMinutes: number | null;
+  /** Somme prépa + repos + cuisson (pour l'affichage rapide en carte). */
+  totalMinutes: number | null;
   difficulty: RecipeDifficulty | null;
   ingredients: RecipeIngredient[];
   steps: string[];
   tags: string[];
+  kcal: number | null;
+  carbsG: number | null;
+  proteinG: number | null;
+  fatG: number | null;
   rating: number;
   isFavorite: boolean;
+}
+
+function sumMinutes(...vals: (number | null)[]): number | null {
+  const present = vals.filter((v): v is number => typeof v === "number");
+  if (present.length === 0) return null;
+  return present.reduce((a, b) => a + b, 0);
 }
 
 /** Ligne base de données → vue UI. */
@@ -29,11 +42,18 @@ export function recipeToView(r: Recipe): RecipeView {
     title: r.title,
     categoryName: r.category_name,
     servings: r.servings,
-    timeMinutes: r.time_minutes,
+    prepMinutes: r.prep_minutes,
+    restMinutes: r.rest_minutes,
+    cookMinutes: r.cook_minutes,
+    totalMinutes: sumMinutes(r.prep_minutes, r.rest_minutes, r.cook_minutes),
     difficulty: r.difficulty,
     ingredients: r.ingredients ?? [],
     steps: r.steps ?? [],
     tags: r.tags ?? [],
+    kcal: r.kcal,
+    carbsG: r.carbs_g,
+    proteinG: r.protein_g,
+    fatG: r.fat_g,
     rating: r.rating,
     isFavorite: r.is_favorite,
   };
@@ -46,11 +66,18 @@ export function draftToView(d: RecipeDraft): RecipeView {
     title: d.title,
     categoryName: d.categoryName,
     servings: d.servings,
-    timeMinutes: d.timeMinutes,
+    prepMinutes: d.prepMinutes,
+    restMinutes: d.restMinutes,
+    cookMinutes: d.cookMinutes,
+    totalMinutes: sumMinutes(d.prepMinutes, d.restMinutes, d.cookMinutes),
     difficulty: d.difficulty,
     ingredients: d.ingredients,
     steps: d.steps,
     tags: d.tags,
+    kcal: d.kcal,
+    carbsG: d.carbsG,
+    proteinG: d.proteinG,
+    fatG: d.fatG,
     rating: 0,
     isFavorite: false,
   };

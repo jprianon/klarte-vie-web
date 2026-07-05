@@ -27,11 +27,18 @@ export interface RecipeDraft {
   title: string;
   categoryName: string;
   servings: number | null;
-  timeMinutes: number | null;
+  prepMinutes: number | null;
+  restMinutes: number | null;
+  cookMinutes: number | null;
   difficulty: RecipeDifficulty | null;
   ingredients: RecipeIngredient[];
   steps: string[];
   tags: string[];
+  /** Valeurs nutritionnelles estimées (par portion ou pour la recette). */
+  kcal: number | null;
+  carbsG: number | null;
+  proteinG: number | null;
+  fatG: number | null;
 }
 
 /** Domaines (onglets) du dashboard de pilotage de vie. */

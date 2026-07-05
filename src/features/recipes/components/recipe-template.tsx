@@ -1,26 +1,38 @@
-import { ChefHat, Clock, Users } from "lucide-react";
+import { ChefHat, Clock, Flame, Users } from "lucide-react";
 
-import { formatDuration } from "@/lib/utils";
 import type { RecipeView } from "@/features/recipes/service";
 import { Stars } from "./stars";
 
 /**
  * Rendu UNIFORME d'une recette — le template. Utilisé à l'identique pour
- * l'aperçu IA (avant enregistrement) et le détail d'une recette enregistrée :
- * c'est ce composant unique qui garantit que toutes les recettes se ressemblent.
+ * l'aperçu IA et le détail d'une recette enregistrée : c'est ce composant
+ * unique qui garantit que toutes les recettes se ressemblent.
  */
 export function RecipeTemplate({ view }: { view: RecipeView }) {
+  const times = [
+    { label: "Prépa", value: view.prepMinutes },
+    { label: "Repos", value: view.restMinutes },
+    { label: "Cuisson", value: view.cookMinutes },
+  ].filter((t) => t.value != null);
+
+  const hasNutrition =
+    view.kcal != null || view.carbsG != null || view.proteinG != null || view.fatG != null;
+
   return (
     <div>
       <h3 className="text-[19px] font-bold tracking-tight">{view.title}</h3>
 
       <div className="my-3 flex flex-wrap items-center gap-3.5 text-[12.5px] font-medium text-foreground/70">
-        <Meta icon={<Clock className="size-3.5 text-muted-foreground" />}>
-          {view.timeMinutes != null ? formatDuration(view.timeMinutes) : "—"}
-        </Meta>
-        <Meta icon={<Users className="size-3.5 text-muted-foreground" />}>
-          {view.servings != null ? `${view.servings} pers.` : "—"}
-        </Meta>
+        {times.map((t) => (
+          <Meta key={t.label} icon={<Clock className="size-3.5 text-muted-foreground" />}>
+            {t.label} {t.value} min
+          </Meta>
+        ))}
+        {view.servings != null && (
+          <Meta icon={<Users className="size-3.5 text-muted-foreground" />}>
+            {view.servings} pers.
+          </Meta>
+        )}
         {view.difficulty && (
           <Meta icon={<ChefHat className="size-3.5 text-muted-foreground" />}>
             <span className="capitalize">{view.difficulty}</span>
@@ -71,6 +83,21 @@ export function RecipeTemplate({ view }: { view: RecipeView }) {
         </div>
       </div>
 
+      {hasNutrition && (
+        <div className="mt-4 rounded-2xl border border-border bg-secondary/40 p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+            <Flame className="size-3.5" />
+            Nutrition
+          </p>
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <Macro label="Énergie" value={view.kcal} unit="kcal" />
+            <Macro label="Glucides" value={view.carbsG} unit="g" />
+            <Macro label="Protéines" value={view.proteinG} unit="g" />
+            <Macro label="Lipides" value={view.fatG} unit="g" />
+          </div>
+        </div>
+      )}
+
       {view.tags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2 border-t border-border/70 pt-3.5">
           {view.tags.map((tag) => (
@@ -83,6 +110,18 @@ export function RecipeTemplate({ view }: { view: RecipeView }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function Macro({ label, value, unit }: { label: string; value: number | null; unit: string }) {
+  return (
+    <div>
+      <div className="text-[15px] font-bold tabular-nums tracking-tight">
+        {value != null ? value : "—"}
+        {value != null && <span className="ml-0.5 text-[10px] font-medium text-muted-foreground">{unit}</span>}
+      </div>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
     </div>
   );
 }
