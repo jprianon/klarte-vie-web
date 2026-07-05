@@ -43,8 +43,10 @@ services:
     restart: unless-stopped
     profiles: ["ollama"]
     environment:
-      # Décharge le modèle de la RAM après 5 min d'inactivité (VPS sans swap).
-      OLLAMA_KEEP_ALIVE: "5m"
+      # Garde le modèle chargé en permanence (-1) → plus de rechargement lent à
+      # chaque usage. Il occupe ~4 Go en continu (borné par mem_limit ci-dessous).
+      # Si la RAM devient tendue, repasser à "30m" (déchargé après inactivité).
+      OLLAMA_KEEP_ALIVE: "-1"
     # Pas de port public : joignable seulement par l'app via le réseau Docker
     # (http://ollama:11434).
     expose:
