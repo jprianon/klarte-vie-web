@@ -23,6 +23,7 @@ import { AiCaptureCard } from "./ai-capture-card";
 import { BottomNav, type RecipeTab } from "./bottom-nav";
 import { FolderPicker } from "./folder-picker";
 import { FoldersView } from "./folders-view";
+import { PlanningView } from "./planning-view";
 import { RecipeDetail } from "./recipe-detail";
 import { RecipeRow } from "./recipe-row";
 import { ShoppingView } from "./shopping-view";
@@ -294,6 +295,15 @@ export function RecipesView() {
         )}
 
         {tab === "courses" && <ShoppingView reloadKey={reloadKey} />}
+
+        {tab === "planning" && (
+          <PlanningView
+            canEdit={configured}
+            reloadKey={reloadKey}
+            recipes={recipes}
+            onOpenRecipe={(v) => setDetail(v)}
+          />
+        )}
       </div>
 
       <BottomNav tab={tab} onTab={setTab} onAdd={() => setAdding(true)} />

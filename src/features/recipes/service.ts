@@ -219,6 +219,49 @@ export function ingredientLabel(ing: { qty: string | null; unit: string | null; 
   return [ing.qty, ing.unit, ing.item].filter(Boolean).join(" ");
 }
 
+/* ── Planning des repas ──────────────────────────────────────────────────── */
+
+export interface PlanMeal {
+  id: string;
+  date: string; // YYYY-MM-DD
+  recipeId: string;
+  title: string;
+  hasImage: boolean;
+}
+
+export async function fetchPlan(from: string, to: string): Promise<PlanMeal[]> {
+  const res = await fetch(`/api/plan?from=${from}&to=${to}`, { cache: "no-store" });
+  if (!res.ok) throw new Error("plan_failed");
+  const data = await res.json();
+  return ((data.meals ?? []) as Array<{
+    id: string;
+    plan_date: string;
+    recipe_id: string;
+    title: string;
+    has_image: boolean;
+  }>).map((m) => ({
+    id: m.id,
+    date: m.plan_date,
+    recipeId: m.recipe_id,
+    title: m.title,
+    hasImage: Boolean(m.has_image),
+  }));
+}
+
+export async function addPlan(date: string, recipeId: string): Promise<void> {
+  const res = await fetch("/api/plan", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ date, recipeId }),
+  });
+  if (!res.ok) throw new Error("add_plan_failed");
+}
+
+export async function deletePlan(id: string): Promise<void> {
+  const res = await fetch(`/api/plan/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("delete_plan_failed");
+}
+
 /** Liste + indicateur « base branchée ? ». */
 export async function fetchRecipes(): Promise<{ configured: boolean; recipes: Recipe[] }> {
   const res = await fetch("/api/recipes", { cache: "no-store" });

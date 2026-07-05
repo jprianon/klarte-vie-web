@@ -76,7 +76,14 @@ async function ready(): Promise<Pool> {
            label      text not null,
            checked    boolean not null default false,
            created_at timestamptz not null default now()
-         );`,
+         );
+         create table if not exists meal_plan (
+           id         uuid primary key default gen_random_uuid(),
+           plan_date  date not null,
+           recipe_id  uuid references recipes(id) on delete cascade,
+           created_at timestamptz not null default now()
+         );
+         create index if not exists meal_plan_date_idx on meal_plan (plan_date);`,
       )
       .then(() => undefined)
       .catch((e) => {
@@ -241,6 +248,41 @@ export async function dbClearShopping(onlyChecked: boolean): Promise<void> {
   await p.query(
     onlyChecked ? "delete from shopping_items where checked = true" : "delete from shopping_items",
   );
+}
+
+/* ── Planning des repas ──────────────────────────────────────────────────── */
+
+export interface PlanMealRow {
+  id: string;
+  plan_date: string;
+  recipe_id: string;
+  title: string;
+  has_image: boolean;
+}
+
+export async function dbListPlan(from: string, to: string): Promise<PlanMealRow[]> {
+  const p = await ready();
+  const { rows } = await p.query<PlanMealRow>(
+    `select mp.id, mp.plan_date::text as plan_date, mp.recipe_id, r.title,
+            (ri.recipe_id is not null) as has_image
+       from meal_plan mp
+       join recipes r on r.id = mp.recipe_id
+       left join recipe_images ri on ri.recipe_id = mp.recipe_id
+      where mp.plan_date >= $1 and mp.plan_date <= $2
+      order by mp.plan_date asc, mp.created_at asc`,
+    [from, to],
+  );
+  return rows;
+}
+
+export async function dbAddPlan(date: string, recipeId: string): Promise<void> {
+  const p = await ready();
+  await p.query("insert into meal_plan (plan_date, recipe_id) values ($1, $2)", [date, recipeId]);
+}
+
+export async function dbDeletePlan(id: string): Promise<void> {
+  const p = await ready();
+  await p.query("delete from meal_plan where id = $1", [id]);
 }
 
 export async function dbCreateRecipe(

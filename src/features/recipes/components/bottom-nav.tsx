@@ -1,10 +1,17 @@
 "use client";
 
-import { Bookmark, FolderClosed, Plus, ShoppingCart, type LucideIcon } from "lucide-react";
+import {
+  Bookmark,
+  CalendarDays,
+  FolderClosed,
+  Plus,
+  ShoppingCart,
+  type LucideIcon,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export type RecipeTab = "recettes" | "dossiers" | "courses";
+export type RecipeTab = "recettes" | "dossiers" | "courses" | "planning";
 
 /** Barre de navigation basse du carnet (Recettes / Dossiers / + / Courses). */
 export function BottomNav({
@@ -35,7 +42,7 @@ export function BottomNav({
           </button>
         </div>
         <TabBtn icon={ShoppingCart} label="Courses" active={tab === "courses"} onClick={() => onTab("courses")} />
-        <div className="flex-1" />
+        <TabBtn icon={CalendarDays} label="Planning" active={tab === "planning"} onClick={() => onTab("planning")} />
       </div>
     </nav>
   );
