@@ -226,7 +226,7 @@ export function RecipeDetail({
       </div>
 
       {/* Carte de contenu qui chevauche l'image */}
-      <div className="-mt-7 flex-1 overflow-y-auto rounded-t-[28px] bg-card px-5 pb-24 pt-6">
+      <div className="-mt-7 flex-1 overflow-y-auto rounded-t-[28px] bg-card px-5 pb-24 pt-9">
         <div className="mx-auto w-full max-w-2xl">
           <div className="flex items-start gap-3">
             <h1 className="flex-1 font-display text-[26px] font-bold leading-[1.15] tracking-tight">
