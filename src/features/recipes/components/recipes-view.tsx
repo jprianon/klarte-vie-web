@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Home, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Loader2, Plus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -219,16 +218,6 @@ export function RecipesView() {
         className="mx-auto w-full max-w-2xl px-5 pb-28 pt-4"
         style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
       >
-        <div className="mb-3 flex items-center">
-          <Link
-            href="/"
-            aria-label="Accueil"
-            className="grid size-10 place-items-center rounded-full border border-border bg-card text-foreground/70 transition-colors hover:text-foreground"
-          >
-            <Home className="size-5" />
-          </Link>
-        </div>
-
         {tab === "recettes" && (
           <>
             <h1 className="font-display text-2xl font-bold tracking-tight">Mes recettes</h1>
