@@ -194,7 +194,9 @@ export function RecipeDetail({
           )}
         </div>
         {canEdit && (
-          <div className="absolute bottom-3 right-3 flex items-center gap-2">
+          // bottom-10 : au-dessus des 28px (~-mt-7) dont la carte de contenu
+          // chevauche le héro, sinon les boutons sont coupés en bas.
+          <div className="absolute bottom-10 right-3 flex items-center gap-2">
             {hasImage && (
               <button
                 type="button"
