@@ -11,7 +11,18 @@ import { formatNote } from "@/features/recipes/ai-provider";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
-async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
+const SAFARI_UA =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile Safari/604.1";
+// Instagram/Facebook ne servent les balises og: (dont la légende) qu'au crawler
+// d'aperçu de liens. On se présente comme lui pour récupérer la recette.
+const FB_CRAWLER_UA = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
+
+/** User-agent adapté au site : crawler FB pour Insta/Facebook, Safari sinon. */
+function userAgentFor(host: string): string {
+  return /(^|\.)(instagram\.com|facebook\.com|fb\.watch)$/i.test(host) ? FB_CRAWLER_UA : SAFARI_UA;
+}
+
+async function fetchWithTimeout(url: string, ms: number, ua: string): Promise<Response> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
@@ -20,9 +31,9 @@ async function fetchWithTimeout(url: string, ms: number): Promise<Response> {
       redirect: "follow",
       headers: {
         // Certains sites renvoient une page vide sans user-agent « navigateur ».
-        "user-agent":
-          "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile Safari/604.1",
+        "user-agent": ua,
         accept: "text/html,application/xhtml+xml",
+        "accept-language": "fr,en;q=0.8",
       },
     });
   } finally {
@@ -131,6 +142,35 @@ function pickImage(img: unknown): string | null {
   return null;
 }
 
+/** Contenu de la 1ʳᵉ balise <meta> correspondant à l'un des noms (property/name). */
+function metaContent(html: string, keys: string[]): string | null {
+  const alt = keys.join("|");
+  const res = [
+    new RegExp(`<meta[^>]+(?:property|name)=["'](?:${alt})["'][^>]+content=["']([^"']*)["']`, "i"),
+    new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["'](?:${alt})["']`, "i"),
+  ];
+  for (const re of res) {
+    const m = html.match(re);
+    if (m?.[1]) return decodeEntities(m[1]).trim();
+  }
+  return null;
+}
+
+/**
+ * Légende / description d'un post (Instagram, TikTok, blogs sans JSON-LD) via
+ * les balises og:. La recette y est souvent en entier. On retire le préfixe
+ * Instagram « 12 K likes, 34 comments - user on date : "…" » pour ne garder que
+ * le texte de la légende.
+ */
+function captionText(html: string): string {
+  const title = metaContent(html, ["og:title", "twitter:title"]) ?? "";
+  let desc =
+    metaContent(html, ["og:description", "twitter:description", "description"]) ?? "";
+  const quoted = desc.match(/:\s*["“«'](.+)["”»']\s*$/s);
+  if (quoted?.[1]) desc = quoted[1].trim();
+  return [title, desc].filter(Boolean).join("\n").trim();
+}
+
 /** Image de repli via les métas Open Graph / Twitter. */
 function metaImage(html: string): string | null {
   const patterns = [
@@ -171,7 +211,12 @@ function extractRecipe(html: string, pageUrl: string): { text: string; imageUrl:
     }
   }
 
-  if (!text) text = htmlToText(html).slice(0, 8000);
+  // Pas de JSON-LD : la légende og: (Insta/TikTok/blogs) est bien plus pertinente
+  // que le texte brut de la page ; on ne se rabat sur ce dernier qu'en dernier ressort.
+  if (!text) {
+    const caption = captionText(html);
+    text = caption.length >= 30 ? caption : htmlToText(html).slice(0, 8000);
+  }
   if (!imageUrl) imageUrl = metaImage(html);
 
   // Résout les URLs relatives contre la page source.
@@ -192,9 +237,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "bad_url", message: "Lien invalide (https://…)." }, { status: 400 });
   }
 
+  let host = "";
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    /* url déjà validée */
+  }
+
   let html = "";
   try {
-    const res = await fetchWithTimeout(url, 20_000);
+    const res = await fetchWithTimeout(url, 20_000, userAgentFor(host));
     if (!res.ok) {
       return NextResponse.json(
         { error: "fetch_failed", message: `Page inaccessible (${res.status}).` },
@@ -212,7 +264,11 @@ export async function POST(request: Request) {
   const { text, imageUrl } = extractRecipe(html, url);
   if (text.trim().length < 30) {
     return NextResponse.json(
-      { error: "empty_text", message: "Aucune recette trouvée sur cette page." },
+      {
+        error: "empty_text",
+        message:
+          "Aucune recette lisible sur ce lien. Astuce : copie la légende du post et colle-la dans « Générateur de recette ».",
+      },
       { status: 422 },
     );
   }
