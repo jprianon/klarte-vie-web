@@ -48,6 +48,9 @@ const config: Config = {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
         },
+        // Accents d'appétit / d'affect, pilotés par variables (dark mode auto).
+        honey: "hsl(var(--honey))",
+        berry: "hsl(var(--berry))",
         // Accents catégories / domaines (issus de la palette iOS système).
         klarte: {
           blue: "#0a84ff",
@@ -76,11 +79,13 @@ const config: Config = {
           "Segoe UI",
           "sans-serif",
         ],
+        // Titres : SF Pro natif sur iPhone (thèse « carnet natif »), Inter en
+        // secours ailleurs. Plus de Fredoka (trop juvénile pour des recettes).
         display: [
-          "var(--font-display)",
-          "var(--font-sans)",
           "-apple-system",
+          "BlinkMacSystemFont",
           "SF Pro Display",
+          "var(--font-sans)",
           "system-ui",
           "sans-serif",
         ],

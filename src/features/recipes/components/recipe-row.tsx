@@ -31,7 +31,7 @@ export function RecipeRow({
       className="group flex cursor-pointer gap-3.5 rounded-2xl border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md"
     >
       <div
-        className="relative size-[92px] shrink-0 overflow-hidden rounded-xl"
+        className="relative size-24 shrink-0 overflow-hidden rounded-2xl"
         style={{ backgroundImage: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
       >
         {recipe.hasImage && !imgError && (
@@ -55,7 +55,11 @@ export function RecipeRow({
         <div className="mt-auto flex flex-wrap gap-1.5 pt-2">
           {recipe.totalMinutes != null && <MiniPill icon={Clock}>{recipe.totalMinutes}min</MiniPill>}
           {recipe.servings != null && <MiniPill icon={Users}>{recipe.servings}x</MiniPill>}
-          {recipe.kcal != null && <MiniPill icon={Flame}>{recipe.kcal}</MiniPill>}
+          {recipe.kcal != null && (
+            <MiniPill icon={Flame} warm>
+              {recipe.kcal}
+            </MiniPill>
+          )}
         </div>
       </div>
 
@@ -84,7 +88,7 @@ export function RecipeRow({
             className="grid size-9 place-items-center rounded-full text-foreground/40 hover:bg-secondary"
           >
             <Heart
-              className={cn("size-[18px]", recipe.isFavorite && "fill-klarte-pink text-klarte-pink")}
+              className={cn("size-[18px]", recipe.isFavorite && "fill-berry text-berry")}
             />
           </button>
           <button
@@ -104,10 +108,23 @@ export function RecipeRow({
   );
 }
 
-function MiniPill({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+function MiniPill({
+  icon: Icon,
+  children,
+  warm = false,
+}: {
+  icon: LucideIcon;
+  children: React.ReactNode;
+  warm?: boolean;
+}) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-primary/[0.08] px-2.5 py-1 text-[11.5px] font-semibold text-foreground/80">
-      <Icon className="size-3 text-primary" />
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-semibold text-foreground/80",
+        warm ? "bg-honey/[0.16]" : "bg-primary/[0.08]",
+      )}
+    >
+      <Icon className={cn("size-3", warm ? "text-honey" : "text-primary")} />
       {children}
     </span>
   );

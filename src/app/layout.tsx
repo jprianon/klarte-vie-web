@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fredoka, Inter } from "next/font/google";
+import { Inter } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { PWARegister } from "@/components/providers/pwa-register";
@@ -12,17 +12,9 @@ const inter = Inter({
   display: "swap",
 });
 
-// Police d'affichage arrondie et chaleureuse pour les titres.
-const fredoka = Fredoka({
-  subsets: ["latin"],
-  variable: "--font-display",
-  weight: ["500", "600", "700"],
-  display: "swap",
-});
-
 export const metadata: Metadata = {
-  title: "Klarte Vie — Pilotage de vie",
-  description: "Ton carnet de recettes, ton trading et ton sport, réunis en un seul dashboard.",
+  title: "Klarte Vie — Carnet de recettes",
+  description: "Ton carnet de recettes : note libre ou photo, l'IA la met en fiche.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -50,7 +42,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="fr" suppressHydrationWarning>
-      <body className={`${inter.variable} ${fredoka.variable} font-sans`}>
+      <body className={`${inter.variable} font-sans`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           {children}
           <Toaster />

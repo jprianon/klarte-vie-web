@@ -4,66 +4,75 @@
 
 @layer base {
   :root {
-    /* Palette claire — beaucoup de blanc, contrastes doux (inspiration Apple). */
-    --background: 0 0% 100%;
-    --foreground: 240 10% 4%;
+    /* Palette claire « carnet de cuisine » : porcelaine à biais vert (pas de
+       blanc clinique), basilic vivant, miel chaud pour l'appétit, framboise
+       pour les favoris. Neutres choisis vers l'accent, pas hérités. */
+    --background: 96 15% 94%; /* porcelaine */
+    --foreground: 150 14% 12%; /* encre vert-ardoise */
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 4%;
+    --card-foreground: 150 14% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 4%;
+    --popover-foreground: 150 14% 12%;
 
-    --primary: 152 42% 16%; /* vert forêt profond */
+    --primary: 151 47% 33%; /* vert basilic */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 6% 10%;
+    --secondary: 96 14% 91%;
+    --secondary-foreground: 150 14% 12%;
 
-    --muted: 240 5% 92%;
-    --muted-foreground: 240 4% 46%;
+    --muted: 96 12% 89%;
+    --muted-foreground: 140 6% 37%;
 
-    --accent: 240 5% 96%;
-    --accent-foreground: 240 6% 10%;
+    --accent: 96 14% 91%;
+    --accent-foreground: 150 14% 12%;
 
     --destructive: 5 78% 57%; /* #FF453A */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 6% 90%;
-    --input: 240 6% 90%;
-    --ring: 152 42% 16%;
+    --border: 96 14% 86%;
+    --input: 96 14% 86%;
+    --ring: 151 47% 33%;
 
-    --radius: 1.25rem;
+    /* Accents d'appétit / d'affect — s'adaptent au thème. */
+    --honey: 34 72% 49%; /* miel : nutrition, mises en avant chaudes */
+    --berry: 347 50% 50%; /* framboise : favoris */
+
+    --radius: 1.375rem; /* 22px — cartes plus douces */
   }
 
   .dark {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
+    --background: 150 12% 6%; /* vert-noir profond */
+    --foreground: 96 12% 93%;
 
-    --card: 240 8% 8%;
-    --card-foreground: 0 0% 98%;
+    --card: 140 13% 10%;
+    --card-foreground: 96 12% 93%;
 
-    --popover: 240 8% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 140 13% 10%;
+    --popover-foreground: 96 12% 93%;
 
-    --primary: 150 40% 45%;
+    --primary: 151 35% 49%; /* basilic lumineux sur fond sombre */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 14%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 135 12% 14%;
+    --secondary-foreground: 96 12% 93%;
 
-    --muted: 240 5% 16%;
-    --muted-foreground: 240 5% 65%;
+    --muted: 135 10% 16%;
+    --muted-foreground: 140 8% 63%;
 
-    --accent: 240 5% 16%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 135 12% 15%;
+    --accent-foreground: 96 12% 93%;
 
     --destructive: 5 78% 57%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 5% 18%;
-    --input: 240 5% 18%;
-    --ring: 150 40% 45%;
+    --border: 132 12% 18%;
+    --input: 132 12% 18%;
+    --ring: 151 35% 49%;
+
+    --honey: 35 76% 59%;
+    --berry: 347 66% 65%;
   }
 }
 
