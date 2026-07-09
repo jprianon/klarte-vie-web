@@ -246,6 +246,20 @@ export async function formatRecipe(note: string): Promise<RecipeDraft> {
   return data.draft as RecipeDraft;
 }
 
+/** Import depuis une URL : la page est récupérée, extraite, mise en fiche par l'IA. */
+export async function importUrl(url: string): Promise<RecipeDraft> {
+  const res = await fetch("/api/recipes/url", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new RecipeAiError(data?.message || `Erreur ${res.status}`, res.status);
+  }
+  return data.draft as RecipeDraft;
+}
+
 /** Import depuis une capture d'écran : OCR (Tesseract) → template. */
 export async function ocrRecipe(file: Blob): Promise<RecipeDraft> {
   const res = await fetch("/api/recipes/ocr", {

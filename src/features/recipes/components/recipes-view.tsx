@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, Plus } from "lucide-react";
 
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import {
   fetchFolders,
   fetchRecipes,
   formatRecipe,
+  importUrl,
   ocrRecipe,
   recipeToView,
   RecipeAiError,
@@ -23,7 +24,8 @@ import {
 import { ensureNotificationPermission, notifyRecipeSaved } from "@/lib/notify";
 import { MOCK_CATEGORIES, MOCK_RECIPES } from "@/features/recipes/mock";
 import { gradientFor } from "@/features/recipes/gradient";
-import { AiCaptureCard, type RecipeJobInput } from "./ai-capture-card";
+import { AddRecipeSheet } from "./add-recipe-sheet";
+import { AiCaptureCard, type AddMode, type RecipeJobInput } from "./ai-capture-card";
 import { BottomNav, type RecipeTab } from "./bottom-nav";
 import { FolderPicker } from "./folder-picker";
 import { FoldersView } from "./folders-view";
@@ -65,7 +67,10 @@ function mockViews(): RecipeView[] {
 export function RecipesView() {
   const [configured, setConfigured] = useState(false);
   const [tab, setTab] = useState<RecipeTab>("recettes");
-  const [adding, setAdding] = useState(false);
+  // Menu « Ajouter » (feuille du bas) + mode de l'écran d'ajout ouvert.
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [addMode, setAddMode] = useState<AddMode | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [recipes, setRecipes] = useState<RecipeView[]>([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<RecipeView | null>(null);
@@ -167,9 +172,15 @@ export function RecipesView() {
   function handleSaved() {
     void refresh();
     bump();
-    setAdding(false);
+    setAddMode(null);
     setTab("recettes");
   }
+
+  const ADD_TITLES: Record<AddMode, string> = {
+    ai: "Générateur de recette",
+    url: "Coller une URL",
+    manual: "Créer une recette",
+  };
 
   /** Ouvre la fiche d'une recette par son id (deep-link depuis la notif). */
   const openById = useCallback(async (id: string) => {
@@ -180,7 +191,7 @@ export function RecipesView() {
       setConfigured(true);
       const found = views.find((r) => r.id === id);
       if (found) {
-        setAdding(false);
+        setAddMode(null);
         setTab("recettes");
         setDetail(found);
       }
@@ -196,8 +207,11 @@ export function RecipesView() {
         const draft =
           job.input.kind === "ai"
             ? await formatRecipe(job.input.note)
-            : await ocrRecipe(job.input.file);
-        const rawNote = job.input.kind === "ai" ? job.input.note : null;
+            : job.input.kind === "url"
+              ? await importUrl(job.input.url)
+              : await ocrRecipe(job.input.file);
+        const rawNote =
+          job.input.kind === "ai" ? job.input.note : job.input.kind === "url" ? job.input.url : null;
         const recipe = await createRecipe(draft, rawNote, "ai");
         await refresh();
         bump();
@@ -225,9 +239,14 @@ export function RecipesView() {
   const queueJob = useCallback(
     (input: RecipeJobInput) => {
       const id = crypto.randomUUID();
-      const label = input.kind === "ai" ? input.note.split("\n")[0]!.slice(0, 40) : "capture";
+      const label =
+        input.kind === "ai"
+          ? input.note.split("\n")[0]!.slice(0, 40)
+          : input.kind === "url"
+            ? input.url
+            : "capture";
       setJobs((js) => [...js, { id, label }]);
-      setAdding(false);
+      setAddMode(null);
       setTab("recettes");
       toast("C'est pris en compte ✨", {
         description: "On met ta recette en forme, tu peux continuer.",
@@ -237,6 +256,18 @@ export function RecipesView() {
     },
     [runJob],
   );
+
+  /** Photo prise depuis le menu → OCR en tâche de fond (base branchée requise). */
+  function handleCamera(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!configured) {
+      toast.error("Base non configurée : impossible d'enregistrer.");
+      return;
+    }
+    queueJob({ kind: "ocr", file });
+  }
 
   // Deep-link « /recettes?recipe=<id> » (ouverture depuis la notification, app froide).
   useEffect(() => {
@@ -260,8 +291,8 @@ export function RecipesView() {
     return () => navigator.serviceWorker.removeEventListener("message", onMsg);
   }, [openById]);
 
-  // ── Écran d'ajout (plein écran) ─────────────────────────────────────────
-  if (adding) {
+  // ── Écran d'ajout (plein écran), piloté par le mode choisi dans le menu ──
+  if (addMode) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-background">
         <div
@@ -270,17 +301,22 @@ export function RecipesView() {
         >
           <button
             type="button"
-            onClick={() => setAdding(false)}
+            onClick={() => setAddMode(null)}
             aria-label="Retour"
             className="grid size-9 place-items-center rounded-full border border-border bg-card text-foreground/70 hover:text-foreground"
           >
             <ArrowLeft className="size-[18px]" />
           </button>
-          <h1 className="font-display text-xl font-bold tracking-tight">Ajouter une recette</h1>
+          <h1 className="font-display text-xl font-bold tracking-tight">{ADD_TITLES[addMode]}</h1>
         </div>
         <div className="flex-1 overflow-y-auto px-5 pb-24 pt-5">
           <div className="mx-auto w-full max-w-2xl">
-            <AiCaptureCard canSave={configured} onSaved={handleSaved} onQueue={queueJob} />
+            <AiCaptureCard
+              mode={addMode}
+              canSave={configured}
+              onSaved={handleSaved}
+              onQueue={queueJob}
+            />
           </div>
         </div>
       </div>
@@ -326,7 +362,7 @@ export function RecipesView() {
                 <p className="text-[14px] text-muted-foreground">Aucune recette pour l&apos;instant.</p>
                 <button
                   type="button"
-                  onClick={() => setAdding(true)}
+                  onClick={() => setSheetOpen(true)}
                   className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm active:scale-[0.98]"
                 >
                   <Plus className="size-4" />
@@ -374,7 +410,26 @@ export function RecipesView() {
         )}
       </div>
 
-      <BottomNav tab={tab} onTab={setTab} onAdd={() => setAdding(true)} />
+      <BottomNav tab={tab} onTab={setTab} onAdd={() => setSheetOpen(true)} />
+
+      <AddRecipeSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onPhoto={() => cameraInputRef.current?.click()}
+        onGenerate={() => setAddMode("ai")}
+        onUrl={() => setAddMode("url")}
+        onManual={() => setAddMode("manual")}
+      />
+
+      {/* Caméra directe pour l'option « Prendre une photo » du menu. */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleCamera}
+      />
 
       {detail && (
         <RecipeDetail

@@ -1,100 +1,93 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { ImagePlus, Loader2, PenLine, Save, Sparkles, Wand2, X } from "lucide-react";
+import { useState } from "react";
+import { Link2, Loader2, Save, Wand2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import type { RecipeDraft } from "@/types";
-import { createRecipe, draftToView, ocrRecipe } from "@/features/recipes/service";
+import { createRecipe, draftToView, formatRecipe, importUrl } from "@/features/recipes/service";
 import { RecipeForm } from "./recipe-form";
 import { RecipeTemplate } from "./recipe-template";
 
 /** Ce que l'écran d'ajout renvoie à traiter en tâche de fond. */
-export type RecipeJobInput = { kind: "ai"; note: string } | { kind: "ocr"; file: File };
+export type RecipeJobInput =
+  | { kind: "ai"; note: string }
+  | { kind: "ocr"; file: File }
+  | { kind: "url"; url: string };
+
+/** Point d'entrée choisi depuis le menu « Ajouter une recette ». */
+export type AddMode = "ai" | "url" | "manual";
 
 /**
- * Carte « note libre → recette formatée » — le geste signature du carnet.
- * - Mode IA / OCR : le traitement est lent, donc on le confie à `onQueue` (tâche
- *   de fond gérée par RecipesView) qui rend la main tout de suite. En mode démo
- *   (base non branchée) on garde l'aperçu inline puisqu'on ne peut rien sauver.
- * - Mode manuel : instantané → aperçu inline classique puis enregistrement.
+ * Écran d'ajout d'une recette, piloté par `mode` (choisi dans le menu) :
+ * - `ai`     : note libre → l'IA la met en fiche.
+ * - `url`    : lien d'une page → import + IA.
+ * - `manual` : formulaire structuré.
+ *
+ * Base branchée : les traitements lents (IA, URL) sont confiés à `onQueue`
+ * (tâche de fond) qui rend la main aussitôt. En mode démo (pas de base), on
+ * garde l'aperçu inline puisqu'on ne peut rien enregistrer.
  */
 export function AiCaptureCard({
+  mode,
   canSave,
   onSaved,
   onQueue,
 }: {
+  mode: AddMode;
   canSave: boolean;
   onSaved: () => void;
   onQueue: (input: RecipeJobInput) => void;
 }) {
-  const [mode, setMode] = useState<"ai" | "manual">("ai");
   const [note, setNote] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<RecipeDraft | null>(null);
   const [rawNote, setRawNote] = useState<string | null>(null);
   const [source, setSource] = useState<"ai" | "manual">("ai");
-  const [ocrLoading, setOcrLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function handleOcr(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    // Base branchée → traitement en tâche de fond (l'écran se ferme aussitôt).
-    if (canSave) {
-      onQueue({ kind: "ocr", file });
-      return;
-    }
-    setOcrLoading(true);
-    try {
-      const d = await ocrRecipe(file);
-      setDraft(d);
-      setRawNote(null);
-      setSource("ai");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Import de la capture impossible.");
-    } finally {
-      setOcrLoading(false);
-    }
-  }
-
-  async function handleFormat() {
+  async function submitAi() {
     if (note.trim().length < 3) {
       toast.error("Écris quelques mots de recette d'abord.");
       return;
     }
-    // Base branchée → traitement en tâche de fond (l'écran se ferme aussitôt).
     if (canSave) {
       onQueue({ kind: "ai", note: note.trim() });
       return;
     }
-    setLoading(true);
+    setBusy(true);
     try {
-      const res = await fetch("/api/recipes/format", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ note }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (res.status === 503) {
-          toast.info("IA non configurée — passe en saisie manuelle.");
-          setMode("manual");
-          return;
-        }
-        toast.error(data?.message ?? "Le reformatage a échoué.");
-        return;
-      }
-      setDraft(data.draft as RecipeDraft);
-      setRawNote(note);
+      setDraft(await formatRecipe(note.trim()));
+      setRawNote(note.trim());
       setSource("ai");
-    } catch {
-      toast.error("Impossible de contacter le serveur.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Le reformatage a échoué.");
     } finally {
-      setLoading(false);
+      setBusy(false);
+    }
+  }
+
+  async function submitUrl() {
+    const u = url.trim();
+    if (!/^https?:\/\/.+/i.test(u)) {
+      toast.error("Colle un lien valide (https://…).");
+      return;
+    }
+    if (canSave) {
+      onQueue({ kind: "url", url: u });
+      return;
+    }
+    setBusy(true);
+    try {
+      setDraft(await importUrl(u));
+      setRawNote(u);
+      setSource("ai");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Import impossible.");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -115,7 +108,6 @@ export function AiCaptureCard({
       await createRecipe(draft, rawNote, source);
       toast.success(`« ${draft.title} » ajoutée au carnet.`);
       setDraft(null);
-      setNote("");
       onSaved();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "L'enregistrement a échoué.");
@@ -124,88 +116,82 @@ export function AiCaptureCard({
     }
   }
 
-  return (
-    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-      <div className="mb-3 flex items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
-          <Sparkles className="size-3.5" />
-          IA
-        </span>
-        <p className="hidden text-[13px] text-muted-foreground sm:block">Écris comme ça te vient.</p>
-        <button
-          type="button"
-          onClick={() => setMode((m) => (m === "ai" ? "manual" : "ai"))}
-          className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground/70 hover:text-foreground"
-        >
-          <PenLine className="size-3.5" />
-          {mode === "ai" ? "Manuel" : "IA"}
-        </button>
-      </div>
+  // Aperçu (mode démo IA/URL, et toujours pour la saisie manuelle).
+  if (draft) {
+    return (
+      <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="flex items-center gap-2 border-b border-border/70 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-wide">
+          <span className="size-[7px] rounded-full bg-primary" />
+          <span className="text-primary">Aperçu</span>
+          <span className="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[10.5px] text-muted-foreground">
+            {draft.categoryName}
+          </span>
+        </div>
+        <div className="p-4">
+          <RecipeTemplate view={draftToView(draft)} />
+          <div className="mt-5 flex flex-wrap items-center gap-2.5">
+            <Button onClick={handleSave} disabled={saving || !canSave}>
+              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              Enregistrer
+            </Button>
+            <Button variant="ghost" onClick={() => setDraft(null)} disabled={saving}>
+              <X className="size-4" />
+              Rejeter
+            </Button>
+            {!canSave && (
+              <span className="text-xs text-muted-foreground">
+                Base non configurée — enregistrement indisponible.
+              </span>
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
-      {draft ? (
-        <div className="overflow-hidden rounded-2xl border border-border bg-background">
-          <div className="flex items-center gap-2 border-b border-border/70 px-4 py-2.5 text-[12px] font-semibold uppercase tracking-wide">
-            <span className="size-[7px] rounded-full bg-primary" />
-            <span className="text-primary">Aperçu</span>
-            <span className="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[10.5px] text-muted-foreground">
-              {draft.categoryName}
-            </span>
-          </div>
-          <div className="p-4">
-            <RecipeTemplate view={draftToView(draft)} />
-            <div className="mt-5 flex flex-wrap items-center gap-2.5">
-              <Button onClick={handleSave} disabled={saving || !canSave}>
-                {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
-                Enregistrer
-              </Button>
-              <Button variant="ghost" onClick={() => setDraft(null)} disabled={saving}>
-                <X className="size-4" />
-                Rejeter
-              </Button>
-              {!canSave && (
-                <span className="text-xs text-muted-foreground">
-                  Base non configurée — enregistrement indisponible.
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : mode === "ai" ? (
-        <div className="flex flex-col gap-3">
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={5}
-            placeholder={
-              "poulet curry coco pour 4\n2 blancs de poulet, une boîte de lait coco, oignon, ail, 2 cs de pâte de curry rouge…\nfaire revenir oignon ail, ajouter poulet, déglacer au lait coco, mijoter 20 min. riz à côté.\nenv 30 min, on adore"
-            }
-            className="w-full resize-y rounded-2xl border border-border bg-secondary/40 p-4 text-[13.5px] leading-relaxed text-foreground/80 placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <div className="flex flex-wrap items-center gap-2.5">
-            <Button onClick={handleFormat} disabled={loading || ocrLoading}>
-              {loading ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
-              {loading ? "Reformatage…" : "Reformater avec l'IA"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={ocrLoading || loading}
-            >
-              {ocrLoading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
-              {ocrLoading ? "Lecture…" : "Importer une capture"}
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleOcr}
-            />
-          </div>
-        </div>
-      ) : (
-        <RecipeForm submitLabel="Prévisualiser" onSubmit={handleManualSubmit} />
-      )}
-    </section>
+  if (mode === "manual") {
+    return <RecipeForm submitLabel="Prévisualiser" onSubmit={handleManualSubmit} />;
+  }
+
+  if (mode === "url") {
+    return (
+      <div className="flex flex-col gap-3">
+        <input
+          type="url"
+          inputMode="url"
+          autoCapitalize="none"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://exemple.com/ma-recette"
+          className="w-full rounded-2xl border border-border bg-secondary/40 p-4 text-[14px] text-foreground/80 placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+        <p className="text-[12.5px] text-muted-foreground">
+          Colle le lien d&apos;une recette (blog, site de cuisine…). L&apos;IA en extrait la fiche.
+        </p>
+        <Button onClick={submitUrl} disabled={busy}>
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <Link2 className="size-4" />}
+          {busy ? "Import…" : "Importer la recette"}
+        </Button>
+      </div>
+    );
+  }
+
+  // mode === "ai"
+  return (
+    <div className="flex flex-col gap-3">
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={6}
+        placeholder={
+          "poulet curry coco pour 4\n2 blancs de poulet, une boîte de lait coco, oignon, ail, 2 cs de pâte de curry rouge…\nfaire revenir oignon ail, ajouter poulet, déglacer au lait coco, mijoter 20 min. riz à côté.\nenv 30 min, on adore"
+        }
+        className="w-full resize-y rounded-2xl border border-border bg-secondary/40 p-4 text-[13.5px] leading-relaxed text-foreground/80 placeholder:text-muted-foreground/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+      <Button onClick={submitAi} disabled={busy}>
+        {busy ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
+        {busy ? "Reformatage…" : "Générer la recette"}
+      </Button>
+    </div>
   );
 }
