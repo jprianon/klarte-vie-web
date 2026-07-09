@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Loader2, Plus } from "lucide-react";
 
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { RecipeDraft } from "@/types";
 import {
@@ -32,8 +31,6 @@ import { PlanningView } from "./planning-view";
 import { RecipeDetail } from "./recipe-detail";
 import { RecipeRow } from "./recipe-row";
 import { ShoppingView } from "./shopping-view";
-
-const ALL = "all";
 
 /** Recettes mock (démo) mappées en vues quand la base n'est pas configurée. */
 function mockViews(): RecipeView[] {
@@ -71,7 +68,6 @@ export function RecipesView() {
   const [adding, setAdding] = useState(false);
   const [recipes, setRecipes] = useState<RecipeView[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCat, setSelectedCat] = useState<string>(ALL);
   const [detail, setDetail] = useState<RecipeView | null>(null);
   const [pickerRecipe, setPickerRecipe] = useState<RecipeView | null>(null);
   const [folders, setFolders] = useState<FolderSummary[]>([]);
@@ -112,23 +108,6 @@ export function RecipesView() {
   useEffect(() => {
     void refreshFolders();
   }, [refreshFolders, reloadKey]);
-
-  const categories = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const r of recipes) {
-      const name = r.categoryName ?? "Sans catégorie";
-      counts.set(name, (counts.get(name) ?? 0) + 1);
-    }
-    return [...counts.entries()].map(([name, count]) => ({ name, count }));
-  }, [recipes]);
-
-  const filtered = useMemo(
-    () =>
-      selectedCat === ALL
-        ? recipes
-        : recipes.filter((r) => (r.categoryName ?? "Sans catégorie") === selectedCat),
-    [recipes, selectedCat],
-  );
 
   async function handleToggleFavorite(view: RecipeView) {
     if (!configured || !view.id) return;
@@ -338,32 +317,11 @@ export function RecipesView() {
               </div>
             )}
 
-            {categories.length > 0 && (
-              <div className="mb-5 mt-4 flex flex-wrap gap-2.5">
-                <Chip
-                  active={selectedCat === ALL}
-                  onClick={() => setSelectedCat(ALL)}
-                  label="Toutes"
-                  count={recipes.length}
-                />
-                {categories.map((c) => (
-                  <Chip
-                    key={c.name}
-                    active={selectedCat === c.name}
-                    onClick={() => setSelectedCat(c.name)}
-                    label={c.name}
-                    count={c.count}
-                    dot={gradientFor(c.name)[1]}
-                  />
-                ))}
-              </div>
-            )}
-
             {loading ? (
               <div className="grid place-items-center py-16 text-muted-foreground">
                 <Loader2 className="size-6 animate-spin" />
               </div>
-            ) : filtered.length === 0 ? (
+            ) : recipes.length === 0 ? (
               <div className="mt-6 rounded-2xl border border-dashed border-border py-16 text-center">
                 <p className="text-[14px] text-muted-foreground">Aucune recette pour l&apos;instant.</p>
                 <button
@@ -377,7 +335,7 @@ export function RecipesView() {
               </div>
             ) : (
               <div className="flex flex-col gap-3.5">
-                {filtered.map((r) => (
+                {recipes.map((r) => (
                   <RecipeRow
                     key={r.id}
                     recipe={r}
@@ -442,44 +400,5 @@ export function RecipesView() {
         />
       )}
     </>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  label,
-  count,
-  dot,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  count: number;
-  dot?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        active
-          ? "border-foreground bg-foreground text-background"
-          : "border-border bg-card text-foreground/70 hover:text-foreground",
-      )}
-    >
-      {dot && <span className="size-2.5 rounded-full" style={{ backgroundColor: dot }} />}
-      {label}
-      <span
-        className={cn(
-          "text-[12.5px] tabular-nums",
-          active ? "text-background/60" : "text-muted-foreground",
-        )}
-      >
-        {count}
-      </span>
-    </button>
   );
 }
