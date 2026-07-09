@@ -65,8 +65,25 @@ const config: Config = {
         sm: "calc(var(--radius) - 10px)",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
-        display: ["var(--font-display)", "var(--font-sans)", "system-ui", "sans-serif"],
+        // Fallback natif iOS (SF Pro) tant que les web fonts ne sont pas chargées :
+        // évite le FOUT et donne un rendu système sur iPhone.
+        sans: [
+          "var(--font-sans)",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "SF Pro Text",
+          "system-ui",
+          "Segoe UI",
+          "sans-serif",
+        ],
+        display: [
+          "var(--font-display)",
+          "var(--font-sans)",
+          "-apple-system",
+          "SF Pro Display",
+          "system-ui",
+          "sans-serif",
+        ],
       },
       keyframes: {
         "fade-in": {

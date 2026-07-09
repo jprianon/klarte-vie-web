@@ -74,9 +74,47 @@
 
   html {
     text-rendering: optimizeLegibility;
+    /* iOS : pas d'agrandissement auto du texte en rotation / lecture. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
+    /* iOS PWA : pas de rebond « rubber-band » de tout le document (feel natif). */
+    overscroll-behavior-y: none;
+  }
+
+  /* iOS : supprime le flash gris et le menu long-press sur les éléments tactiles. */
+  a,
+  button,
+  [role="button"],
+  label,
+  summary {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  /* iOS : scroll inertiel + confinement du rebond dans les zones scrollables. */
+  .overflow-y-auto,
+  .overflow-auto,
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* iOS Safari zoome la page dès qu'un champ < 16px est focalisé. Sur écrans
+     tactiles uniquement, on force 16px (le rendu compact desktop est préservé). */
+  @media (pointer: coarse) {
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+
+  /* Sélection aux couleurs de la marque plutôt que le bleu système. */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.18);
   }
 }
