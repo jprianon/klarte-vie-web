@@ -1,0 +1,12 @@
+# Normalise les fins de ligne. OneDrive réécrit les fichiers et produisait des
+# « modifications » LF↔CRLF fantômes (git status plein de fichiers 0 insertion).
+# On fige tout le texte en LF dans le dépôt, quel que soit l'OS.
+* text=auto eol=lf
+
+# Binaires : jamais de conversion.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.pdf binary
