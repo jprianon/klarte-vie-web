@@ -10,14 +10,46 @@ import { dbDeleteImage, dbGetImage, dbSetImage, hasDb } from "@/lib/db";
  */
 export const runtime = "nodejs";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!hasDb()) return new NextResponse(null, { status: 404 });
   const { id } = await params;
+  const width = Number(new URL(request.url).searchParams.get("w")) || 0;
   try {
     const img = await dbGetImage(id);
     if (!img) return new NextResponse(null, { status: 404 });
-    return new NextResponse(new Uint8Array(img.data), {
-      headers: { "content-type": img.contentType, "cache-control": "private, max-age=3600" },
+
+    let data: Buffer = img.data;
+    let contentType = img.contentType;
+
+    // Vignette redimensionnée à la demande (?w=…) : divise par ~100 le poids
+    // d'une photo de téléphone servie à 96px. sharp est optionnel : en cas
+    // d'absence/erreur on renvoie l'original (aucune régression).
+    if (width > 0 && width <= 2048) {
+      const sharp = await import("sharp")
+        .then((m) => m.default)
+        .catch(() => null);
+      if (sharp) {
+        try {
+          const wantsWebp = (request.headers.get("accept") ?? "").includes("image/webp");
+          const pipe = sharp(img.data)
+            .rotate() // auto-oriente via l'EXIF (photos de travers du mobile)
+            .resize({ width, withoutEnlargement: true });
+          data = wantsWebp
+            ? await pipe.webp({ quality: 72 }).toBuffer()
+            : await pipe.jpeg({ quality: 78 }).toBuffer();
+          contentType = wantsWebp ? "image/webp" : "image/jpeg";
+        } catch {
+          /* garde l'original */
+        }
+      }
+    }
+
+    return new NextResponse(new Uint8Array(data), {
+      headers: {
+        "content-type": contentType,
+        "cache-control": "private, max-age=86400",
+        vary: "Accept",
+      },
     });
   } catch {
     return new NextResponse(null, { status: 500 });

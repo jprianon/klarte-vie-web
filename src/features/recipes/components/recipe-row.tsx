@@ -37,8 +37,10 @@ export function RecipeRow({
         {recipe.hasImage && !imgError && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={recipeImageUrl(recipe.id)}
+            src={recipeImageUrl(recipe.id, 0, 192)}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="absolute inset-0 h-full w-full object-cover"
             onError={() => setImgError(true)}
           />

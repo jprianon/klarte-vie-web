@@ -86,10 +86,18 @@ export function draftToView(d: RecipeDraft): RecipeView {
   };
 }
 
-/** URL de la photo d'une recette (le paramètre `v` casse le cache après upload). */
-export function recipeImageUrl(id: string | null, version = 0): string {
+/**
+ * URL de la photo d'une recette.
+ * - `version` (`?v`) casse le cache après un ré-upload.
+ * - `width` (`?w`) demande une vignette redimensionnée (bien plus légère).
+ */
+export function recipeImageUrl(id: string | null, version = 0, width = 0): string {
   if (!id) return "";
-  return `/api/recipes/${id}/image${version ? `?v=${version}` : ""}`;
+  const params = new URLSearchParams();
+  if (version) params.set("v", String(version));
+  if (width) params.set("w", String(width));
+  const qs = params.toString();
+  return `/api/recipes/${id}/image${qs ? `?${qs}` : ""}`;
 }
 
 export async function uploadRecipeImage(id: string, file: Blob): Promise<void> {

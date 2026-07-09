@@ -219,8 +219,10 @@ export function PlanningView({
                               {meal.hasImage && (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
-                                  src={recipeImageUrl(meal.recipeId)}
+                                  src={recipeImageUrl(meal.recipeId, 0, 96)}
                                   alt=""
+                                  loading="lazy"
+                                  decoding="async"
                                   className="absolute inset-0 h-full w-full object-cover"
                                 />
                               )}
@@ -314,8 +316,10 @@ function RecipePickerModal({
                         {r.hasImage && r.id && (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={recipeImageUrl(r.id)}
+                            src={recipeImageUrl(r.id, 0, 96)}
                             alt=""
+                            loading="lazy"
+                            decoding="async"
                             className="absolute inset-0 h-full w-full object-cover"
                           />
                         )}
