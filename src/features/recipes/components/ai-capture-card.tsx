@@ -81,7 +81,7 @@ export function AiCaptureCard({
     }
     setBusy(true);
     try {
-      setDraft(await importUrl(u));
+      setDraft((await importUrl(u)).draft);
       setRawNote(u);
       setSource("ai");
     } catch (e) {

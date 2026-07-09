@@ -246,8 +246,13 @@ export async function formatRecipe(note: string): Promise<RecipeDraft> {
   return data.draft as RecipeDraft;
 }
 
-/** Import depuis une URL : la page est récupérée, extraite, mise en fiche par l'IA. */
-export async function importUrl(url: string): Promise<RecipeDraft> {
+/**
+ * Import depuis une URL : la page est récupérée, extraite, mise en fiche par
+ * l'IA. `imageUrl` = photo trouvée sur la page (à enregistrer automatiquement).
+ */
+export async function importUrl(
+  url: string,
+): Promise<{ draft: RecipeDraft; imageUrl: string | null }> {
   const res = await fetch("/api/recipes/url", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -257,7 +262,17 @@ export async function importUrl(url: string): Promise<RecipeDraft> {
   if (!res.ok) {
     throw new RecipeAiError(data?.message || `Erreur ${res.status}`, res.status);
   }
-  return data.draft as RecipeDraft;
+  return { draft: data.draft as RecipeDraft, imageUrl: (data.imageUrl as string) || null };
+}
+
+/** Enregistre la photo d'une recette depuis une URL distante (import auto). */
+export async function attachImageFromUrl(recipeId: string, url: string): Promise<void> {
+  const res = await fetch(`/api/recipes/${recipeId}/image`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) throw new Error("attach_image_failed");
 }
 
 /** Import depuis une capture d'écran : OCR (Tesseract) → template. */

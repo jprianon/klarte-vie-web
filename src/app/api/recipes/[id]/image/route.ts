@@ -56,11 +56,58 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
+/** Récupère une image distante (import auto depuis une URL de recette). */
+async function fetchRemoteImage(url: string): Promise<{ contentType: string; buf: Buffer } | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 15_000);
+  try {
+    const res = await fetch(url, {
+      signal: ctrl.signal,
+      redirect: "follow",
+      headers: { "user-agent": "Mozilla/5.0", accept: "image/*" },
+    });
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") ?? "";
+    if (!ct.startsWith("image/")) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length === 0 || buf.length > 10_000_000) return null;
+    return { contentType: ct.split(";")[0]!.trim(), buf };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!hasDb()) return NextResponse.json({ error: "not_configured" }, { status: 503 });
   const { id } = await params;
 
   const contentType = request.headers.get("content-type") ?? "";
+
+  // Variante « import auto » : corps JSON { url } → on récupère l'image distante.
+  if (contentType.includes("application/json")) {
+    const body = await request.json().catch(() => null);
+    const url = typeof body?.url === "string" ? body.url.trim() : "";
+    if (!/^https?:\/\/.+/i.test(url)) {
+      return NextResponse.json({ error: "bad_url", message: "Lien image invalide." }, { status: 400 });
+    }
+    const img = await fetchRemoteImage(url);
+    if (!img) {
+      return NextResponse.json(
+        { error: "image_unreachable", message: "Image distante inaccessible." },
+        { status: 502 },
+      );
+    }
+    try {
+      await dbSetImage(id, img.contentType, img.buf);
+      return NextResponse.json({ ok: true });
+    } catch (e) {
+      console.error("[api/recipes/:id/image POST url]", e);
+      return NextResponse.json({ error: "db_error" }, { status: 500 });
+    }
+  }
+
   if (!contentType.startsWith("image/")) {
     return NextResponse.json({ error: "bad_type", message: "Fichier image attendu." }, { status: 400 });
   }

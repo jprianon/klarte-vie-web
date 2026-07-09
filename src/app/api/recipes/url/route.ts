@@ -62,6 +62,7 @@ type JsonLdRecipe = {
   recipeIngredient?: unknown;
   ingredients?: unknown;
   recipeInstructions?: unknown;
+  image?: unknown;
 };
 
 /** Cherche un objet @type Recipe dans un JSON-LD (gère @graph et les tableaux). */
@@ -113,8 +114,44 @@ function recipeToText(r: JsonLdRecipe): string {
   return lines.join("\n");
 }
 
-/** Extrait la recette d'une page : JSON-LD d'abord, sinon texte brut nettoyé. */
-function extractRecipeText(html: string): string {
+/** Choisit une URL d'image dans un champ JSON-LD `image` (string/array/objet). */
+function pickImage(img: unknown): string | null {
+  if (!img) return null;
+  if (typeof img === "string") return img;
+  if (Array.isArray(img)) {
+    for (const i of img) {
+      const u = pickImage(i);
+      if (u) return u;
+    }
+    return null;
+  }
+  if (typeof img === "object" && "url" in (img as object)) {
+    return pickImage((img as { url: unknown }).url);
+  }
+  return null;
+}
+
+/** Image de repli via les métas Open Graph / Twitter. */
+function metaImage(html: string): string | null {
+  const patterns = [
+    /<meta[^>]+(?:property|name)=["'](?:og:image|og:image:secure_url|twitter:image)["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:image|twitter:image)["']/i,
+  ];
+  for (const re of patterns) {
+    const m = html.match(re);
+    if (m?.[1]) return m[1];
+  }
+  return null;
+}
+
+/**
+ * Extrait la recette d'une page : JSON-LD d'abord (texte + image), sinon texte
+ * brut nettoyé et image Open Graph. Les URLs relatives sont résolues.
+ */
+function extractRecipe(html: string, pageUrl: string): { text: string; imageUrl: string | null } {
+  let text = "";
+  let imageUrl: string | null = null;
+
   const scripts = html.matchAll(
     /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
   );
@@ -122,14 +159,30 @@ function extractRecipeText(html: string): string {
     try {
       const recipe = findRecipe(JSON.parse(m[1]!.trim()));
       if (recipe) {
-        const text = recipeToText(recipe);
-        if (text.trim().length >= 30) return text;
+        const t = recipeToText(recipe);
+        if (t.trim().length >= 30) {
+          text = t;
+          imageUrl = pickImage(recipe.image);
+          break;
+        }
       }
     } catch {
       /* JSON-LD mal formé : on continue */
     }
   }
-  return htmlToText(html).slice(0, 8000);
+
+  if (!text) text = htmlToText(html).slice(0, 8000);
+  if (!imageUrl) imageUrl = metaImage(html);
+
+  // Résout les URLs relatives contre la page source.
+  if (imageUrl) {
+    try {
+      imageUrl = new URL(imageUrl, pageUrl).href;
+    } catch {
+      imageUrl = null;
+    }
+  }
+  return { text, imageUrl };
 }
 
 export async function POST(request: Request) {
@@ -156,7 +209,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const text = extractRecipeText(html);
+  const { text, imageUrl } = extractRecipe(html, url);
   if (text.trim().length < 30) {
     return NextResponse.json(
       { error: "empty_text", message: "Aucune recette trouvée sur cette page." },
@@ -168,5 +221,5 @@ export async function POST(request: Request) {
   if (!result.ok) {
     return NextResponse.json({ error: result.error, message: result.message }, { status: result.status });
   }
-  return NextResponse.json({ draft: result.draft });
+  return NextResponse.json({ draft: result.draft, imageUrl });
 }

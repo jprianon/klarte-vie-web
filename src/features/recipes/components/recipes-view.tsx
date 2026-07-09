@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { RecipeDraft } from "@/types";
 import {
   addShopping,
+  attachImageFromUrl,
   createRecipe,
   deleteRecipe,
   fetchFolders,
@@ -18,6 +19,7 @@ import {
   RecipeAiError,
   toggleFavorite,
   updateRecipe,
+  uploadRecipeImage,
   type FolderSummary,
   type RecipeView,
 } from "@/features/recipes/service";
@@ -204,15 +206,29 @@ export function RecipesView() {
   const runJob = useCallback(
     async (job: { id: string; input: RecipeJobInput }) => {
       try {
-        const draft =
-          job.input.kind === "ai"
-            ? await formatRecipe(job.input.note)
-            : job.input.kind === "url"
-              ? await importUrl(job.input.url)
-              : await ocrRecipe(job.input.file);
+        let draft: RecipeDraft;
+        let webImage: string | null = null;
+        if (job.input.kind === "ai") {
+          draft = await formatRecipe(job.input.note);
+        } else if (job.input.kind === "url") {
+          const r = await importUrl(job.input.url);
+          draft = r.draft;
+          webImage = r.imageUrl;
+        } else {
+          draft = await ocrRecipe(job.input.file);
+        }
         const rawNote =
           job.input.kind === "ai" ? job.input.note : job.input.kind === "url" ? job.input.url : null;
         const recipe = await createRecipe(draft, rawNote, "ai");
+
+        // Photo automatique : la capture prise (OCR) ou l'image de la page (URL).
+        try {
+          if (job.input.kind === "ocr") await uploadRecipeImage(recipe.id, job.input.file);
+          else if (webImage) await attachImageFromUrl(recipe.id, webImage);
+        } catch {
+          /* la photo est un bonus : on n'échoue pas l'enregistrement pour ça */
+        }
+
         await refresh();
         bump();
         await notifyRecipeSaved({ id: recipe.id, title: recipe.title });
