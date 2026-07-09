@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { PWARegister } from "@/components/providers/pwa-register";
+import { WakeLock } from "@/components/providers/wake-lock";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           {children}
           <Toaster />
           <PWARegister />
+          <WakeLock />
         </ThemeProvider>
       </body>
     </html>
