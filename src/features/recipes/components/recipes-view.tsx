@@ -8,18 +8,23 @@ import { toast } from "sonner";
 import type { RecipeDraft } from "@/types";
 import {
   addShopping,
+  createRecipe,
   deleteRecipe,
   fetchFolders,
   fetchRecipes,
+  formatRecipe,
+  ocrRecipe,
   recipeToView,
+  RecipeAiError,
   toggleFavorite,
   updateRecipe,
   type FolderSummary,
   type RecipeView,
 } from "@/features/recipes/service";
+import { ensureNotificationPermission, notifyRecipeSaved } from "@/lib/notify";
 import { MOCK_CATEGORIES, MOCK_RECIPES } from "@/features/recipes/mock";
 import { gradientFor } from "@/features/recipes/gradient";
-import { AiCaptureCard } from "./ai-capture-card";
+import { AiCaptureCard, type RecipeJobInput } from "./ai-capture-card";
 import { BottomNav, type RecipeTab } from "./bottom-nav";
 import { FolderPicker } from "./folder-picker";
 import { FoldersView } from "./folders-view";
@@ -71,6 +76,8 @@ export function RecipesView() {
   const [pickerRecipe, setPickerRecipe] = useState<RecipeView | null>(null);
   const [folders, setFolders] = useState<FolderSummary[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
+  // Recettes en cours de préparation IA/OCR (tâche de fond), pour l'indicateur.
+  const [jobs, setJobs] = useState<{ id: string; label: string }[]>([]);
 
   const bump = useCallback(() => setReloadKey((k) => k + 1), []);
 
@@ -185,6 +192,95 @@ export function RecipesView() {
     setTab("recettes");
   }
 
+  /** Ouvre la fiche d'une recette par son id (deep-link depuis la notif). */
+  const openById = useCallback(async (id: string) => {
+    try {
+      const { recipes } = await fetchRecipes();
+      const views = recipes.map(recipeToView);
+      setRecipes(views);
+      setConfigured(true);
+      const found = views.find((r) => r.id === id);
+      if (found) {
+        setAdding(false);
+        setTab("recettes");
+        setDetail(found);
+      }
+    } catch {
+      /* silencieux : la notif reste, l'utilisateur retrouvera la recette dans la liste */
+    }
+  }, []);
+
+  /** Exécute un job IA/OCR : reformate → enregistre → notifie. */
+  const runJob = useCallback(
+    async (job: { id: string; input: RecipeJobInput }) => {
+      try {
+        const draft =
+          job.input.kind === "ai"
+            ? await formatRecipe(job.input.note)
+            : await ocrRecipe(job.input.file);
+        const rawNote = job.input.kind === "ai" ? job.input.note : null;
+        const recipe = await createRecipe(draft, rawNote, "ai");
+        await refresh();
+        bump();
+        await notifyRecipeSaved({ id: recipe.id, title: recipe.title });
+        toast.success(`« ${recipe.title} » enregistrée`, {
+          description: "Touche pour la revoir et l'ajuster.",
+          action: { label: "Voir", onClick: () => void openById(recipe.id) },
+        });
+      } catch (e) {
+        const msg =
+          e instanceof RecipeAiError && e.status === 503
+            ? "IA non configurée — ajoute la recette en saisie manuelle."
+            : e instanceof Error
+              ? e.message
+              : "La recette n'a pas pu être enregistrée.";
+        toast.error(msg);
+      } finally {
+        setJobs((js) => js.filter((j) => j.id !== job.id));
+      }
+    },
+    [refresh, bump, openById],
+  );
+
+  /** Envoi depuis l'écran d'ajout : confirme, revient à l'accueil, traite en fond. */
+  const queueJob = useCallback(
+    (input: RecipeJobInput) => {
+      const id = crypto.randomUUID();
+      const label = input.kind === "ai" ? input.note.split("\n")[0]!.slice(0, 40) : "capture";
+      setJobs((js) => [...js, { id, label }]);
+      setAdding(false);
+      setTab("recettes");
+      toast("C'est pris en compte ✨", {
+        description: "On met ta recette en forme, tu peux continuer.",
+      });
+      void ensureNotificationPermission();
+      void runJob({ id, input });
+    },
+    [runJob],
+  );
+
+  // Deep-link « /recettes?recipe=<id> » (ouverture depuis la notification, app froide).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("recipe");
+    if (id) {
+      void openById(id);
+      window.history.replaceState(null, "", "/recettes");
+    }
+  }, [openById]);
+
+  // Message du service worker (clic notif quand l'app est déjà ouverte).
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    const onMsg = (e: MessageEvent) => {
+      if (e.data?.type === "open-recipe" && typeof e.data.id === "string") {
+        void openById(e.data.id);
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", onMsg);
+    return () => navigator.serviceWorker.removeEventListener("message", onMsg);
+  }, [openById]);
+
   // ── Écran d'ajout (plein écran) ─────────────────────────────────────────
   if (adding) {
     return (
@@ -205,7 +301,7 @@ export function RecipesView() {
         </div>
         <div className="flex-1 overflow-y-auto px-5 pb-24 pt-5">
           <div className="mx-auto w-full max-w-2xl">
-            <AiCaptureCard canSave={configured} onSaved={handleSaved} />
+            <AiCaptureCard canSave={configured} onSaved={handleSaved} onQueue={queueJob} />
           </div>
         </div>
       </div>
@@ -228,6 +324,17 @@ export function RecipesView() {
             {!configured && (
               <div className="mt-4 rounded-xl border border-border bg-secondary/50 px-4 py-3 text-[13px] text-muted-foreground">
                 Base de données non configurée : recettes de démonstration.
+              </div>
+            )}
+
+            {jobs.length > 0 && (
+              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/[0.06] px-4 py-3">
+                <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+                <p className="text-[13px] text-foreground/80">
+                  {jobs.length === 1
+                    ? "Une recette se prépare — tu seras prévenu(e)."
+                    : `${jobs.length} recettes se préparent…`}
+                </p>
               </div>
             )}
 

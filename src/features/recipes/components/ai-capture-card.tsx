@@ -10,18 +10,24 @@ import { createRecipe, draftToView, ocrRecipe } from "@/features/recipes/service
 import { RecipeForm } from "./recipe-form";
 import { RecipeTemplate } from "./recipe-template";
 
+/** Ce que l'écran d'ajout renvoie à traiter en tâche de fond. */
+export type RecipeJobInput = { kind: "ai"; note: string } | { kind: "ocr"; file: File };
+
 /**
  * Carte « note libre → recette formatée » — le geste signature du carnet.
- * - Mode IA : la note part vers /api/recipes/format et revient dans le template.
- * - Mode manuel : le formulaire réutilisable (RecipeForm) produit le même draft.
- * Dans les deux cas : aperçu par le MÊME template, puis enregistrement.
+ * - Mode IA / OCR : le traitement est lent, donc on le confie à `onQueue` (tâche
+ *   de fond gérée par RecipesView) qui rend la main tout de suite. En mode démo
+ *   (base non branchée) on garde l'aperçu inline puisqu'on ne peut rien sauver.
+ * - Mode manuel : instantané → aperçu inline classique puis enregistrement.
  */
 export function AiCaptureCard({
   canSave,
   onSaved,
+  onQueue,
 }: {
   canSave: boolean;
   onSaved: () => void;
+  onQueue: (input: RecipeJobInput) => void;
 }) {
   const [mode, setMode] = useState<"ai" | "manual">("ai");
   const [note, setNote] = useState("");
@@ -37,6 +43,11 @@ export function AiCaptureCard({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    // Base branchée → traitement en tâche de fond (l'écran se ferme aussitôt).
+    if (canSave) {
+      onQueue({ kind: "ocr", file });
+      return;
+    }
     setOcrLoading(true);
     try {
       const d = await ocrRecipe(file);
@@ -53,6 +64,11 @@ export function AiCaptureCard({
   async function handleFormat() {
     if (note.trim().length < 3) {
       toast.error("Écris quelques mots de recette d'abord.");
+      return;
+    }
+    // Base branchée → traitement en tâche de fond (l'écran se ferme aussitôt).
+    if (canSave) {
+      onQueue({ kind: "ai", note: note.trim() });
       return;
     }
     setLoading(true);

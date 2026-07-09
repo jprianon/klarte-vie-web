@@ -214,6 +214,30 @@ export async function clearShopping(onlyChecked: boolean): Promise<void> {
   if (!res.ok) throw new Error("shopping_clear_failed");
 }
 
+/** Erreur d'appel IA/OCR portant le code HTTP (503 = IA non configurée). */
+export class RecipeAiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "RecipeAiError";
+    this.status = status;
+  }
+}
+
+/** Reformatage IA d'une note libre → brouillon structuré. */
+export async function formatRecipe(note: string): Promise<RecipeDraft> {
+  const res = await fetch("/api/recipes/format", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ note }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new RecipeAiError(data?.message || `Erreur ${res.status}`, res.status);
+  }
+  return data.draft as RecipeDraft;
+}
+
 /** Import depuis une capture d'écran : OCR (Tesseract) → template. */
 export async function ocrRecipe(file: Blob): Promise<RecipeDraft> {
   const res = await fetch("/api/recipes/ocr", {
@@ -221,11 +245,11 @@ export async function ocrRecipe(file: Blob): Promise<RecipeDraft> {
     headers: { "content-type": file.type || "application/octet-stream" },
     body: file,
   });
+  const data = await res.json().catch(() => null);
   if (!res.ok) {
-    const d = await res.json().catch(() => null);
-    throw new Error(d?.message || `Erreur ${res.status}`);
+    throw new RecipeAiError(data?.message || `Erreur ${res.status}`, res.status);
   }
-  return (await res.json()).draft as RecipeDraft;
+  return data.draft as RecipeDraft;
 }
 
 /** Libellé d'affichage d'un ingrédient (pour la liste de courses). */
