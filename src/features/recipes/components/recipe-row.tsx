@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, Flame, FolderPlus, Heart, Trash2, Users, type LucideIcon } from "lucide-react";
+import { Clock, Flame, Heart, Trash2, Users, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { recipeImageUrl, type RecipeView } from "@/features/recipes/service";
@@ -14,14 +14,12 @@ export function RecipeRow({
   onOpen,
   onToggleFavorite,
   onDelete,
-  onAddToFolder,
 }: {
   recipe: RecipeView;
   canEdit: boolean;
   onOpen: () => void;
   onToggleFavorite: () => void;
   onDelete: () => void;
-  onAddToFolder?: () => void;
 }) {
   const gradient = gradientFor(recipe.categoryName);
   const [imgError, setImgError] = useState(false);
@@ -31,16 +29,14 @@ export function RecipeRow({
       className="group flex cursor-pointer gap-3.5 rounded-2xl border border-border bg-card p-3 shadow-sm transition-shadow hover:shadow-md"
     >
       <div
-        className="relative size-24 shrink-0 overflow-hidden rounded-2xl"
+        className="relative size-[92px] shrink-0 overflow-hidden rounded-xl"
         style={{ backgroundImage: `linear-gradient(135deg, ${gradient[0]}, ${gradient[1]})` }}
       >
         {recipe.hasImage && !imgError && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={recipeImageUrl(recipe.id, 0, 192)}
+            src={recipeImageUrl(recipe.id)}
             alt=""
-            loading="lazy"
-            decoding="async"
             className="absolute inset-0 h-full w-full object-cover"
             onError={() => setImgError(true)}
           />
@@ -57,29 +53,12 @@ export function RecipeRow({
         <div className="mt-auto flex flex-wrap gap-1.5 pt-2">
           {recipe.totalMinutes != null && <MiniPill icon={Clock}>{recipe.totalMinutes}min</MiniPill>}
           {recipe.servings != null && <MiniPill icon={Users}>{recipe.servings}x</MiniPill>}
-          {recipe.kcal != null && (
-            <MiniPill icon={Flame} warm>
-              {recipe.kcal}
-            </MiniPill>
-          )}
+          {recipe.kcal != null && <MiniPill icon={Flame}>{recipe.kcal}</MiniPill>}
         </div>
       </div>
 
       {canEdit && (
         <div className="flex flex-col items-center justify-center gap-1">
-          {onAddToFolder && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onAddToFolder();
-              }}
-              aria-label="Ranger dans un dossier"
-              className="grid size-9 place-items-center rounded-full text-foreground/40 hover:bg-secondary hover:text-foreground"
-            >
-              <FolderPlus className="size-[18px]" />
-            </button>
-          )}
           <button
             type="button"
             onClick={(e) => {
@@ -90,7 +69,7 @@ export function RecipeRow({
             className="grid size-9 place-items-center rounded-full text-foreground/40 hover:bg-secondary"
           >
             <Heart
-              className={cn("size-[18px]", recipe.isFavorite && "fill-berry text-berry")}
+              className={cn("size-[18px]", recipe.isFavorite && "fill-klarte-pink text-klarte-pink")}
             />
           </button>
           <button
@@ -110,23 +89,10 @@ export function RecipeRow({
   );
 }
 
-function MiniPill({
-  icon: Icon,
-  children,
-  warm = false,
-}: {
-  icon: LucideIcon;
-  children: React.ReactNode;
-  warm?: boolean;
-}) {
+function MiniPill({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-semibold text-foreground/80",
-        warm ? "bg-honey/[0.16]" : "bg-primary/[0.08]",
-      )}
-    >
-      <Icon className={cn("size-3", warm ? "text-honey" : "text-primary")} />
+    <span className="inline-flex items-center gap-1 rounded-full bg-primary/[0.08] px-2.5 py-1 text-[11.5px] font-semibold text-foreground/80">
+      <Icon className="size-3 text-primary" />
       {children}
     </span>
   );

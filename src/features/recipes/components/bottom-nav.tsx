@@ -3,17 +3,17 @@
 import {
   Bookmark,
   CalendarDays,
-  FolderClosed,
   Plus,
   ShoppingCart,
+  Tags,
   type LucideIcon,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export type RecipeTab = "recettes" | "dossiers" | "courses" | "planning";
+export type RecipeTab = "recettes" | "themes" | "courses" | "planning";
 
-/** Barre de navigation basse du carnet (Recettes / Dossiers / + / Courses). */
+/** Barre de navigation basse du carnet (Recettes / Thèmes / + / Courses). */
 export function BottomNav({
   tab,
   onTab,
@@ -30,7 +30,7 @@ export function BottomNav({
         style={{ paddingBottom: "max(0.4rem, env(safe-area-inset-bottom))" }}
       >
         <TabBtn icon={Bookmark} label="Recettes" active={tab === "recettes"} onClick={() => onTab("recettes")} />
-        <TabBtn icon={FolderClosed} label="Dossiers" active={tab === "dossiers"} onClick={() => onTab("dossiers")} />
+        <TabBtn icon={Tags} label="Catégories" active={tab === "themes"} onClick={() => onTab("themes")} />
         <div className="flex w-16 shrink-0 justify-center">
           <button
             type="button"

@@ -1,40 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Loader2, Plus } from "lucide-react";
 
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { RecipeDraft } from "@/types";
 import {
   addShopping,
-  attachImageFromUrl,
-  createRecipe,
   deleteRecipe,
-  fetchFolders,
   fetchRecipes,
-  formatRecipe,
-  importUrl,
-  ocrRecipe,
   recipeToView,
-  RecipeAiError,
   toggleFavorite,
   updateRecipe,
-  uploadRecipeImage,
-  type FolderSummary,
   type RecipeView,
 } from "@/features/recipes/service";
-import { ensureNotificationPermission, notifyRecipeSaved } from "@/lib/notify";
 import { MOCK_CATEGORIES, MOCK_RECIPES } from "@/features/recipes/mock";
 import { gradientFor } from "@/features/recipes/gradient";
-import { AddRecipeSheet } from "./add-recipe-sheet";
-import { AiCaptureCard, type AddMode, type RecipeJobInput } from "./ai-capture-card";
+import { AiCaptureCard } from "./ai-capture-card";
 import { BottomNav, type RecipeTab } from "./bottom-nav";
-import { FolderPicker } from "./folder-picker";
-import { FoldersView } from "./folders-view";
+import { ThemesView } from "./themes-view";
 import { PlanningView } from "./planning-view";
 import { RecipeDetail } from "./recipe-detail";
 import { RecipeRow } from "./recipe-row";
 import { ShoppingView } from "./shopping-view";
+
+const ALL = "all";
 
 /** Recettes mock (démo) mappées en vues quand la base n'est pas configurée. */
 function mockViews(): RecipeView[] {
@@ -63,24 +54,18 @@ function mockViews(): RecipeView[] {
 }
 
 /**
- * Carnet de recettes : navigation basse (Recettes / Dossiers / Courses),
- * bouton + central pour ajouter, écran détail et sélecteur de dossiers.
+ * Carnet de recettes : navigation basse (Recettes / Thèmes / Courses),
+ * bouton + central pour ajouter et écran détail.
  */
 export function RecipesView() {
   const [configured, setConfigured] = useState(false);
   const [tab, setTab] = useState<RecipeTab>("recettes");
-  // Menu « Ajouter » (feuille du bas) + mode de l'écran d'ajout ouvert.
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [addMode, setAddMode] = useState<AddMode | null>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [adding, setAdding] = useState(false);
   const [recipes, setRecipes] = useState<RecipeView[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCat, setSelectedCat] = useState<string>(ALL);
   const [detail, setDetail] = useState<RecipeView | null>(null);
-  const [pickerRecipe, setPickerRecipe] = useState<RecipeView | null>(null);
-  const [folders, setFolders] = useState<FolderSummary[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
-  // Recettes en cours de préparation IA/OCR (tâche de fond), pour l'indicateur.
-  const [jobs, setJobs] = useState<{ id: string; label: string }[]>([]);
 
   const bump = useCallback(() => setReloadKey((k) => k + 1), []);
 
@@ -103,18 +88,22 @@ export function RecipesView() {
     void refresh();
   }, [refresh]);
 
-  const refreshFolders = useCallback(async () => {
-    try {
-      const { folders } = await fetchFolders();
-      setFolders(folders);
-    } catch {
-      /* silencieux : les dossiers ne sont pas bloquants */
+  const categories = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const r of recipes) {
+      const name = r.categoryName ?? "Sans catégorie";
+      counts.set(name, (counts.get(name) ?? 0) + 1);
     }
-  }, []);
+    return [...counts.entries()].map(([name, count]) => ({ name, count }));
+  }, [recipes]);
 
-  useEffect(() => {
-    void refreshFolders();
-  }, [refreshFolders, reloadKey]);
+  const filtered = useMemo(
+    () =>
+      selectedCat === ALL
+        ? recipes
+        : recipes.filter((r) => (r.categoryName ?? "Sans catégorie") === selectedCat),
+    [recipes, selectedCat],
+  );
 
   async function handleToggleFavorite(view: RecipeView) {
     if (!configured || !view.id) return;
@@ -174,141 +163,12 @@ export function RecipesView() {
   function handleSaved() {
     void refresh();
     bump();
-    setAddMode(null);
+    setAdding(false);
     setTab("recettes");
   }
 
-  const ADD_TITLES: Record<AddMode, string> = {
-    ai: "Générateur de recette",
-    url: "Coller une URL",
-    manual: "Créer une recette",
-  };
-
-  /** Ouvre la fiche d'une recette par son id (deep-link depuis la notif). */
-  const openById = useCallback(async (id: string) => {
-    try {
-      const { recipes } = await fetchRecipes();
-      const views = recipes.map(recipeToView);
-      setRecipes(views);
-      setConfigured(true);
-      const found = views.find((r) => r.id === id);
-      if (found) {
-        setAddMode(null);
-        setTab("recettes");
-        setDetail(found);
-      }
-    } catch {
-      /* silencieux : la notif reste, l'utilisateur retrouvera la recette dans la liste */
-    }
-  }, []);
-
-  /** Exécute un job IA/OCR : reformate → enregistre → notifie. */
-  const runJob = useCallback(
-    async (job: { id: string; input: RecipeJobInput }) => {
-      try {
-        let draft: RecipeDraft;
-        let webImage: string | null = null;
-        if (job.input.kind === "ai") {
-          draft = await formatRecipe(job.input.note);
-        } else if (job.input.kind === "url") {
-          const r = await importUrl(job.input.url);
-          draft = r.draft;
-          webImage = r.imageUrl;
-        } else {
-          draft = await ocrRecipe(job.input.file);
-        }
-        const rawNote =
-          job.input.kind === "ai" ? job.input.note : job.input.kind === "url" ? job.input.url : null;
-        const recipe = await createRecipe(draft, rawNote, "ai");
-
-        // Photo automatique : la capture prise (OCR) ou l'image de la page (URL).
-        try {
-          if (job.input.kind === "ocr") await uploadRecipeImage(recipe.id, job.input.file);
-          else if (webImage) await attachImageFromUrl(recipe.id, webImage);
-        } catch {
-          /* la photo est un bonus : on n'échoue pas l'enregistrement pour ça */
-        }
-
-        await refresh();
-        bump();
-        await notifyRecipeSaved({ id: recipe.id, title: recipe.title });
-        toast.success(`« ${recipe.title} » enregistrée`, {
-          description: "Touche pour la revoir et l'ajuster.",
-          action: { label: "Voir", onClick: () => void openById(recipe.id) },
-        });
-      } catch (e) {
-        const msg =
-          e instanceof RecipeAiError && e.status === 503
-            ? "IA non configurée — ajoute la recette en saisie manuelle."
-            : e instanceof Error
-              ? e.message
-              : "La recette n'a pas pu être enregistrée.";
-        toast.error(msg);
-      } finally {
-        setJobs((js) => js.filter((j) => j.id !== job.id));
-      }
-    },
-    [refresh, bump, openById],
-  );
-
-  /** Envoi depuis l'écran d'ajout : confirme, revient à l'accueil, traite en fond. */
-  const queueJob = useCallback(
-    (input: RecipeJobInput) => {
-      const id = crypto.randomUUID();
-      const label =
-        input.kind === "ai"
-          ? input.note.split("\n")[0]!.slice(0, 40)
-          : input.kind === "url"
-            ? input.url
-            : "capture";
-      setJobs((js) => [...js, { id, label }]);
-      setAddMode(null);
-      setTab("recettes");
-      toast("C'est pris en compte ✨", {
-        description: "On met ta recette en forme, tu peux continuer.",
-      });
-      void ensureNotificationPermission();
-      void runJob({ id, input });
-    },
-    [runJob],
-  );
-
-  /** Photo prise depuis le menu → OCR en tâche de fond (base branchée requise). */
-  function handleCamera(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (!configured) {
-      toast.error("Base non configurée : impossible d'enregistrer.");
-      return;
-    }
-    queueJob({ kind: "ocr", file });
-  }
-
-  // Deep-link « /recettes?recipe=<id> » (ouverture depuis la notification, app froide).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const id = new URLSearchParams(window.location.search).get("recipe");
-    if (id) {
-      void openById(id);
-      window.history.replaceState(null, "", "/recettes");
-    }
-  }, [openById]);
-
-  // Message du service worker (clic notif quand l'app est déjà ouverte).
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-    const onMsg = (e: MessageEvent) => {
-      if (e.data?.type === "open-recipe" && typeof e.data.id === "string") {
-        void openById(e.data.id);
-      }
-    };
-    navigator.serviceWorker.addEventListener("message", onMsg);
-    return () => navigator.serviceWorker.removeEventListener("message", onMsg);
-  }, [openById]);
-
-  // ── Écran d'ajout (plein écran), piloté par le mode choisi dans le menu ──
-  if (addMode) {
+  // ── Écran d'ajout (plein écran) ─────────────────────────────────────────
+  if (adding) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col bg-background">
         <div
@@ -317,22 +177,17 @@ export function RecipesView() {
         >
           <button
             type="button"
-            onClick={() => setAddMode(null)}
+            onClick={() => setAdding(false)}
             aria-label="Retour"
             className="grid size-9 place-items-center rounded-full border border-border bg-card text-foreground/70 hover:text-foreground"
           >
             <ArrowLeft className="size-[18px]" />
           </button>
-          <h1 className="font-display text-xl font-bold tracking-tight">{ADD_TITLES[addMode]}</h1>
+          <h1 className="font-display text-xl font-bold tracking-tight">Ajouter une recette</h1>
         </div>
         <div className="flex-1 overflow-y-auto px-5 pb-24 pt-5">
           <div className="mx-auto w-full max-w-2xl">
-            <AiCaptureCard
-              mode={addMode}
-              canSave={configured}
-              onSaved={handleSaved}
-              onQueue={queueJob}
-            />
+            <AiCaptureCard canSave={configured} onSaved={handleSaved} />
           </div>
         </div>
       </div>
@@ -358,14 +213,24 @@ export function RecipesView() {
               </div>
             )}
 
-            {jobs.length > 0 && (
-              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/[0.06] px-4 py-3">
-                <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
-                <p className="text-[13px] text-foreground/80">
-                  {jobs.length === 1
-                    ? "Une recette se prépare — tu seras prévenu(e)."
-                    : `${jobs.length} recettes se préparent…`}
-                </p>
+            {categories.length > 0 && (
+              <div className="mb-5 mt-4 flex flex-wrap gap-2.5">
+                <Chip
+                  active={selectedCat === ALL}
+                  onClick={() => setSelectedCat(ALL)}
+                  label="Toutes"
+                  count={recipes.length}
+                />
+                {categories.map((c) => (
+                  <Chip
+                    key={c.name}
+                    active={selectedCat === c.name}
+                    onClick={() => setSelectedCat(c.name)}
+                    label={c.name}
+                    count={c.count}
+                    dot={gradientFor(c.name)[1]}
+                  />
+                ))}
               </div>
             )}
 
@@ -373,12 +238,12 @@ export function RecipesView() {
               <div className="grid place-items-center py-16 text-muted-foreground">
                 <Loader2 className="size-6 animate-spin" />
               </div>
-            ) : recipes.length === 0 ? (
+            ) : filtered.length === 0 ? (
               <div className="mt-6 rounded-2xl border border-dashed border-border py-16 text-center">
                 <p className="text-[14px] text-muted-foreground">Aucune recette pour l&apos;instant.</p>
                 <button
                   type="button"
-                  onClick={() => setSheetOpen(true)}
+                  onClick={() => setAdding(true)}
                   className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm active:scale-[0.98]"
                 >
                   <Plus className="size-4" />
@@ -387,7 +252,7 @@ export function RecipesView() {
               </div>
             ) : (
               <div className="flex flex-col gap-3.5">
-                {recipes.map((r) => (
+                {filtered.map((r) => (
                   <RecipeRow
                     key={r.id}
                     recipe={r}
@@ -395,7 +260,6 @@ export function RecipesView() {
                     onOpen={() => setDetail(r)}
                     onToggleFavorite={() => handleToggleFavorite(r)}
                     onDelete={() => handleDelete(r)}
-                    onAddToFolder={() => setPickerRecipe(r)}
                   />
                 ))}
               </div>
@@ -403,14 +267,13 @@ export function RecipesView() {
           </>
         )}
 
-        {tab === "dossiers" && (
-          <FoldersView
+        {tab === "themes" && (
+          <ThemesView
+            recipes={recipes}
             canEdit={configured}
-            reloadKey={reloadKey}
             onOpenRecipe={(v) => setDetail(v)}
             onToggleFavorite={handleToggleFavorite}
             onDeleteRecipe={handleDelete}
-            onAddToFolder={(v) => setPickerRecipe(v)}
           />
         )}
 
@@ -426,26 +289,7 @@ export function RecipesView() {
         )}
       </div>
 
-      <BottomNav tab={tab} onTab={setTab} onAdd={() => setSheetOpen(true)} />
-
-      <AddRecipeSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        onPhoto={() => cameraInputRef.current?.click()}
-        onGenerate={() => setAddMode("ai")}
-        onUrl={() => setAddMode("url")}
-        onManual={() => setAddMode("manual")}
-      />
-
-      {/* Caméra directe pour l'option « Prendre une photo » du menu. */}
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={handleCamera}
-      />
+      <BottomNav tab={tab} onTab={setTab} onAdd={() => setAdding(true)} />
 
       {detail && (
         <RecipeDetail
@@ -461,15 +305,45 @@ export function RecipesView() {
           onAddToShopping={handleAddToShopping}
         />
       )}
-
-      {pickerRecipe && (
-        <FolderPicker
-          recipe={pickerRecipe}
-          folders={folders}
-          onClose={() => setPickerRecipe(null)}
-          onChanged={bump}
-        />
-      )}
     </>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  label,
+  count,
+  dot,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  dot?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border px-3.5 py-2 text-[13.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        active
+          ? "border-foreground bg-foreground text-background"
+          : "border-border bg-card text-foreground/70 hover:text-foreground",
+      )}
+    >
+      {dot && <span className="size-2.5 rounded-full" style={{ backgroundColor: dot }} />}
+      {label}
+      <span
+        className={cn(
+          "text-[12.5px] tabular-nums",
+          active ? "text-background/60" : "text-muted-foreground",
+        )}
+      >
+        {count}
+      </span>
+    </button>
   );
 }
