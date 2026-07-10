@@ -30,15 +30,15 @@ export type AddMode = "ai" | "url" | "manual";
  * garde l'aperçu inline puisqu'on ne peut rien enregistrer.
  */
 export function AiCaptureCard({
-  mode,
+  mode = "ai",
   canSave,
   onSaved,
   onQueue,
 }: {
-  mode: AddMode;
+  mode?: AddMode;
   canSave: boolean;
   onSaved: () => void;
-  onQueue: (input: RecipeJobInput) => void;
+  onQueue?: (input: RecipeJobInput) => void;
 }) {
   const [note, setNote] = useState("");
   const [url, setUrl] = useState("");
@@ -53,7 +53,7 @@ export function AiCaptureCard({
       toast.error("Écris quelques mots de recette d'abord.");
       return;
     }
-    if (canSave) {
+    if (canSave && onQueue) {
       onQueue({ kind: "ai", note: note.trim() });
       return;
     }
@@ -75,7 +75,7 @@ export function AiCaptureCard({
       toast.error("Colle un lien valide (https://…).");
       return;
     }
-    if (canSave) {
+    if (canSave && onQueue) {
       onQueue({ kind: "url", url: u });
       return;
     }
