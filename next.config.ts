@@ -19,6 +19,12 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
   },
+  // Le programme de reprise futsal est une page statique posée dans `public/`.
+  // Next ne résout pas les index de dossier dans `public/`, d'où la réécriture
+  // explicite pour offrir une URL propre : /futsal
+  async rewrites() {
+    return [{ source: "/futsal", destination: "/klarte-futsall/index.html" }];
+  },
 };
 
 export default nextConfig;

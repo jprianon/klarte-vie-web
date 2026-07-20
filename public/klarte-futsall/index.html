@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retour au futsal — Rééducation déchirure du vaste (quadriceps G)</title>
+<style>
+  :root{
+    --bg:#f6f8fa; --panel:#ffffff; --panel2:#f0f3f6; --line:#d8dee4;
+    --txt:#1f2328; --muted:#5a6570; --accent:#1a7f37; --accent2:#0969da;
+    --warn:#9a6700; --danger:#cf222e; --phase1:#0969da; --phase2:#1a7f37;
+    --phase3:#8250df; --phase4:#bf8700; --phase5:#e16f24; --phase6:#1b9aa8;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:linear-gradient(180deg,#f6f8fa,#eef1f5 60%);
+    color:var(--txt); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55; padding:0 0 80px;
+  }
+  header{
+    padding:34px 22px 26px; text-align:center;
+    background:radial-gradient(1200px 300px at 50% -60px,rgba(9,105,218,.12),transparent);
+    border-bottom:1px solid var(--line);
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:0 20px}
+  h1{font-size:1.7rem; margin:0 0 6px; letter-spacing:.2px}
+  .sub{color:var(--muted); font-size:.98rem; max-width:760px; margin:0 auto}
+  .pillrow{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:16px}
+  .pill{background:var(--panel2); border:1px solid var(--line); border-radius:999px;
+    padding:6px 13px; font-size:.82rem; color:var(--muted)}
+  .pill b{color:var(--txt); font-weight:600}
+
+  .banner{
+    max-width:1080px; margin:24px auto 0; padding:14px 18px; border-radius:var(--radius);
+    background:linear-gradient(90deg,rgba(191,135,0,.12),rgba(191,135,0,.03));
+    border:1px solid rgba(191,135,0,.35); color:#6b4e00; font-size:.92rem;
+  }
+  .banner b{color:#4d3800}
+
+  .progress-card{
+    max-width:1080px; margin:20px auto 0; background:var(--panel); border:1px solid var(--line);
+    border-radius:var(--radius); padding:18px 20px;
+  }
+  .progress-top{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; flex-wrap:wrap; gap:8px}
+  .progress-top h2{font-size:1rem; margin:0}
+  .progress-top span{color:var(--muted); font-size:.85rem}
+  .bar{height:12px; background:#e6eaef; border-radius:999px; overflow:hidden; border:1px solid var(--line)}
+  .bar > i{display:block; height:100%; width:0%; background:linear-gradient(90deg,var(--accent2),var(--accent));
+    transition:width .4s ease}
+  .bar-note{font-size:.8rem; color:var(--muted); margin-top:8px}
+
+  section{margin-top:30px}
+  h2.sec{font-size:1.28rem; margin:0 0 4px; display:flex; align-items:center; gap:10px}
+  h2.sec small{font-weight:400; color:var(--muted); font-size:.8rem}
+  .sec-intro{color:var(--muted); font-size:.92rem; margin:0 0 16px}
+
+  .phase{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    margin-bottom:16px; overflow:hidden;
+  }
+  .phase-head{
+    display:flex; align-items:flex-start; gap:14px; padding:16px 18px; cursor:pointer;
+    border-left:5px solid var(--l,#555);
+  }
+  .phase-head:hover{background:var(--panel2)}
+  .pnum{
+    flex:0 0 auto; width:34px; height:34px; border-radius:9px; display:grid; place-items:center;
+    font-weight:700; font-size:.95rem; background:var(--l,#555); color:#0d1117;
+  }
+  .phase-head .pt{flex:1 1 auto}
+  .phase-head .pt h3{margin:0; font-size:1.05rem}
+  .phase-head .pt p{margin:3px 0 0; color:var(--muted); font-size:.86rem}
+  .chev{color:var(--muted); font-size:1.1rem; transition:transform .25s; margin-top:4px}
+  .phase.open .chev{transform:rotate(90deg)}
+  .phase-body{display:none; padding:4px 18px 20px 18px}
+  .phase.open .phase-body{display:block}
+
+  .block-title{font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+    margin:16px 0 8px; font-weight:700}
+  ul.clean{list-style:none; margin:0; padding:0}
+  ul.clean li{padding:5px 0 5px 22px; position:relative; font-size:.92rem}
+  ul.clean li::before{content:"▸"; position:absolute; left:4px; color:var(--accent2); font-weight:700}
+
+  .checkline{display:flex; align-items:flex-start; gap:11px; padding:8px 10px; border-radius:9px;
+    border:1px solid transparent}
+  .checkline:hover{background:var(--panel2)}
+  .checkline input{margin-top:3px; width:17px; height:17px; accent-color:var(--accent); flex:0 0 auto; cursor:pointer}
+  .checkline label{font-size:.92rem; cursor:pointer}
+  .checkline.done label{color:var(--muted); text-decoration:line-through}
+  .crit-box{background:var(--panel2); border:1px solid var(--line); border-radius:11px; padding:6px 8px; margin-top:6px}
+  .gate{font-size:.82rem; color:var(--warn); margin-top:10px; padding-left:2px}
+  .gate b{color:#6b4e00}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px}
+  .card h3{margin:0 0 6px; font-size:1rem}
+  .card p{margin:0 0 8px; color:var(--muted); font-size:.9rem}
+
+  .table-scroll{overflow-x:auto}
+  table{width:100%; border-collapse:collapse; font-size:.88rem; margin-top:6px; min-width:620px}
+  th,td{text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{color:var(--muted); font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.04em}
+  tbody tr:hover{background:var(--panel2)}
+  td .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px}
+
+  .alert-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  @media(max-width:720px){.alert-grid{grid-template-columns:1fr}}
+  .alert{border-radius:12px; padding:13px 15px; font-size:.9rem; border:1px solid}
+  .alert.red{background:rgba(248,81,73,.09); border-color:rgba(248,81,73,.4)}
+  .alert.red h4{margin:0 0 6px; color:#b0202b}
+  .alert.green{background:rgba(63,185,80,.09); border-color:rgba(63,185,80,.4)}
+  .alert.green h4{margin:0 0 6px; color:#116329}
+  .alert ul{margin:6px 0 0; padding-left:18px}
+  .alert li{margin:3px 0}
+
+  .rule{background:linear-gradient(90deg,rgba(248,81,73,.12),transparent);
+    border-left:4px solid var(--danger); padding:12px 16px; border-radius:8px; margin-top:14px; font-size:.92rem}
+
+  footer{max-width:1080px; margin:40px auto 0; padding:18px 20px; color:var(--muted); font-size:.82rem;
+    border-top:1px solid var(--line); text-align:center}
+  .disclaim{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px 18px; font-size:.85rem; color:var(--muted); margin-top:18px}
+  .disclaim b{color:var(--txt)}
+  .btn-reset{background:var(--panel2); color:var(--muted); border:1px solid var(--line); border-radius:8px;
+    padding:7px 14px; font-size:.82rem; cursor:pointer; margin-top:14px}
+  .btn-reset:hover{color:var(--txt); border-color:var(--muted)}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:.8rem; color:var(--muted); margin-top:8px; justify-content:center}
+  .legend span{display:flex; align-items:center; gap:6px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>🦵 Retour au terrain — Déchirure du vaste (quadriceps gauche)</h1>
+    <p class="sub">Rétroplanning piloté par des <b>critères objectifs</b>, pas par le calendrier.
+    Chaque phase ne se franchit que si ses critères sont validés. Si un critère manque, le planning glisse — même si septembre approche.</p>
+    <div class="pillrow">
+      <div class="pill">Blessure : <b>15 juil. 2026</b></div>
+      <div class="pill">Reprise visée : <b>début sept. 2026</b> (~7 sem.)</div>
+      <div class="pill">Profil : <b>70 kg, futsal amateur bon niveau</b></div>
+      <div class="pill">Statut grade : <b>à confirmer (écho)</b></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="banner">
+    ⏳ <b>Grade non encore confirmé.</b> Le délai réaliste dépend directement du grade :
+    <b>Grade 1</b> → 2–3 sem · <b>Grade 2</b> → 4–8 sem · <b>Grade 3</b> → &gt;8–12 sem.
+    Sur une lésion Grade 2 la reprise début septembre est <b>atteignable mais serrée</b> ; sur un Grade 3 elle est
+    probablement à repousser. Dès que tu as le compte-rendu, ajuste la vitesse de progression —
+    mais garde toujours les <b>critères</b> comme seuls feux verts, jamais la date.
+  </div>
+
+  <div class="progress-card">
+    <div class="progress-top">
+      <h2>Progression globale des critères validés</h2>
+      <span id="pcount">0 / 0 critères cochés</span>
+    </div>
+    <div class="bar"><i id="pbar"></i></div>
+    <p class="bar-note">Coche un critère uniquement quand il est réellement atteint (test objectif, pas « ça va mieux »).
+    Cette barre n'est qu'un repère personnel — elle ne remplace pas l'avis de ton kiné.</p>
+    <div class="legend">
+      <span><span class="dot" style="background:var(--phase1)"></span>Phase 1</span>
+      <span><span class="dot" style="background:var(--phase2)"></span>Phase 2</span>
+      <span><span class="dot" style="background:var(--phase3)"></span>Phase 3</span>
+      <span><span class="dot" style="background:var(--phase4)"></span>Phase 4</span>
+      <span><span class="dot" style="background:var(--phase5)"></span>Phase 5</span>
+      <span><span class="dot" style="background:var(--phase6)"></span>Retour match</span>
+    </div>
+    <button class="btn-reset" onclick="resetAll()">↻ Réinitialiser mes coches</button>
+  </div>
+
+  <!-- ============ SECTION 1 : PHASES ============ -->
+  <section>
+    <h2 class="sec">1 · Les 6 phases de rééducation <small>franchissement par critères, pas par dates</small></h2>
+    <p class="sec-intro">Déplie chaque phase. En bas de chaque bloc : le <b>feu vert</b> — les critères à valider pour passer à la suivante.
+    Tant qu'un critère n'est pas atteint, tu restes dans la phase.</p>
+
+    <!-- PHASE 1 -->
+    <div class="phase" style="--l:var(--phase1)">
+      <div class="phase-head" onclick="togglePhase(this)">
+        <div class="pnum">1</div>
+        <div class="pt">
+          <h3>Protection &amp; désinflammation</h3>
+          <p>Objectif : calmer la lésion, retrouver la marche indolore. Repère : ~J0 → J5-10.</p>
+        </div>
+        <div class="chev">▸</div>
+      </div>
+      <div class="phase-body">
+        <div class="block-title">Ce que tu fais</div>
+        <ul class="clean">
+          <li>Protocole <b>GREC/PEACE&amp;LOVE</b> : éviter l'aggravation, cuissard de compression Gibaud en continu la journée.</li>
+          <li><b>Pas de glace prolongée ni d'anti-inflammatoires systématiques</b> les 3-5 premiers jours (ils peuvent freiner la cicatrisation musculaire) — suis la consigne de ton médecin.</li>
+          <li>Marche dans l'amplitude non douloureuse, cannes seulement si boiterie. Éviter l'étirement passif du quadriceps.</li>
+          <li>Contractions isométriques <b>très douces et indolores</b> du quadriceps (set quad, sans charge) dès que le kiné le valide.</li>
+          <li>Mobilité cheville/hanche à distance de la lésion, drainage doux.</li>
+        </ul>
+        <div class="crit-box">
+          <div class="checkline"><input type="checkbox" data-p="1"><label>Marche à plat <b>sans boiterie ni douleur</b></label></div>
+          <div class="checkline"><input type="checkbox" data-p="1"><label>Douleur au repos = 0/10 ; à la contraction isométrique légère ≤ 2/10</label></div>
+          <div class="checkline"><input type="checkbox" data-p="1"><label>Hématome/gonflement en régression (jambe qui « dégonfle »)</label></div>
+          <div class="checkline"><input type="checkbox" data-p="1"><label>Contraction isométrique du quadriceps possible sans douleur ni sidération</label></div>
+        </div>
+        <div class="gate">🟢 <b>Feu vert phase 2 :</b> les 4 critères ci-dessus validés + accord kiné.</div>
+      </div>
+    </div>
+
+    <!-- PHASE 2 -->
+    <div class="phase" style="--l:var(--phase2)">
+      <div class="phase-head" onclick="togglePhase(this)">
+        <div class="pnum">2</div>
+        <div class="pt">
+          <h3>Amplitude &amp; réactivation musculaire</h3>
+          <p>Objectif : récupérer toute l'amplitude et une contraction franche sans douleur.</p>
+        </div>
+        <div class="chev">▸</div>
+      </div>
+      <div class="phase-body">
+        <div class="block-title">Ce que tu fais</div>
+        <ul class="clean">
+          <li>Récupération progressive de la <b>flexion de genou</b> (talon-fesse) dans l'indolore.</li>
+          <li>Renforcement <b>isométrique multi-angles</b> puis <b>concentrique léger</b> : extensions genou amplitude réduite, mini-squats, presse légère bilatérale.</li>
+          <li>Charge : douleur-guide, jamais &gt; 2-3/10 pendant, et aucune douleur le lendemain.</li>
+          <li>Vélo d'appartement <b>sans résistance</b> d'abord (voir section course).</li>
+          <li>Réveil neuromusculaire du quadriceps (électrostim si prescrite par le kiné).</li>
+        </ul>
+        <div class="crit-box">
+          <div class="checkline"><input type="checkbox" data-p="2"><label>Amplitude de flexion de genou <b>complète et symétrique</b> vs jambe droite</label></div>
+          <div class="checkline"><input type="checkbox" data-p="2"><label>Palpation de la lésion <b>indolore ou quasi</b> (≤ 1/10)</label></div>
+          <div class="checkline"><input type="checkbox" data-p="2"><label>Mini-squat / montée d'escalier <b>sans douleur ni compensation</b></label></div>
+          <div class="checkline"><input type="checkbox" data-p="2"><label>Vélo 15-20 min résistance légère sans douleur pendant ni après</label></div>
+        </div>
+        <div class="gate">🟢 <b>Feu vert phase 3 :</b> amplitude symétrique + contraction indolore en charge légère.</div>
+      </div>
+    </div>
+
+    <!-- PHASE 3 -->
+    <div class="phase" style="--l:var(--phase3)">
+      <div class="phase-head" onclick="togglePhase(this)">
+        <div class="pnum">3</div>
+        <div class="pt">
+          <h3>Renforcement en force &amp; début d'impact</h3>
+          <p>Objectif : reconstruire la force du quadriceps et introduire le footing.</p>
+        </div>
+        <div class="chev">▸</div>
+      </div>
+      <div class="phase-body">
+        <div class="block-title">Ce que tu fais</div>
+        <ul class="clean">
+          <li>Renforcement <b>concentrique + excentrique progressif</b> : squats, fentes contrôlées, presse, leg extension amplitude complète, en montant les charges.</li>
+          <li>Introduction du <b>travail excentrique du quadriceps</b> (descente lente, fentes en excentrique) — base de la prévention des récidives.</li>
+          <li>Passage au <b>footing en ligne droite</b> une fois le critère de marche rapide/trot validé (voir section course).</li>
+          <li>Gainage lourd, chaîne postérieure (ischios, fessiers) pour équilibrer.</li>
+        </ul>
+        <div class="crit-box">
+          <div class="checkline"><input type="checkbox" data-p="3"><label>Force quadriceps ressentie <b>≥ ~70-80 %</b> du côté sain (test kiné / dynamomètre si dispo)</label></div>
+          <div class="checkline"><input type="checkbox" data-p="3"><label>Squat complet chargé <b>sans douleur</b>, symétrique</label></div>
+          <div class="checkline"><input type="checkbox" data-p="3"><label>Footing continu 15-20 min <b>allure lente</b> sans douleur pendant ni le lendemain</label></div>
+          <div class="checkline"><input type="checkbox" data-p="3"><label>Aucune douleur au réveil le lendemain des séances (le « test du lendemain »)</label></div>
+        </div>
+        <div class="gate">🟢 <b>Feu vert phase 4 :</b> footing lent indolore + force ≥ 70-80 % + excentrique bien toléré.</div>
+      </div>
+    </div>
+
+    <!-- PHASE 4 -->
+    <div class="phase" style="--l:var(--phase4)">
+      <div class="phase-head" onclick="togglePhase(this)">
+        <div class="pnum">4</div>
+        <div class="pt">
+          <h3>Vitesse &amp; puissance progressives</h3>
+          <p>Objectif : monter les allures, réintroduire accélérations puis sprints.</p>
+        </div>
+        <div class="chev">▸</div>
+      </div>
+      <div class="phase-body">
+        <div class="block-title">Ce que tu fais</div>
+        <ul class="clean">
+          <li>Progression des <b>allures</b> : footing → allure modérée → allure soutenue (voir section course).</li>
+          <li><b>Accélérations progressives</b> à % de vitesse max croissant (60 → 70 → 80 %), sur distances courtes, récup complète.</li>
+          <li>Renforcement en <b>puissance</b> : squats dynamiques, fentes sautées légères, début pliométrie bipodale douce.</li>
+          <li>Poursuite de l'excentrique quadriceps, montée en volume.</li>
+        </ul>
+        <div class="crit-box">
+          <div class="checkline"><input type="checkbox" data-p="4"><label>Allure soutenue en ligne droite <b>sans appréhension ni douleur</b></label></div>
+          <div class="checkline"><input type="checkbox" data-p="4"><label>Accélérations à 80 % <b>sans gêne</b> à la frappe du sol ni à la palpation après</label></div>
+          <div class="checkline"><input type="checkbox" data-p="4"><label>Force quadriceps <b>≥ ~85-90 %</b> du côté sain</label></div>
+          <div class="checkline"><input type="checkbox" data-p="4"><label>Pliométrie bipodale (sauts) indolore et symétrique à la réception</label></div>
+        </div>
+        <div class="gate">🟢 <b>Feu vert phase 5 :</b> accélérations 80 % indolores + force ≥ 85-90 % + sauts symétriques.</div>
+      </div>
+    </div>
+
+    <!-- PHASE 5 -->
+    <div class="phase" style="--l:var(--phase5)">
+      <div class="phase-head" onclick="togglePhase(this)">
+        <div class="pnum">5</div>
+        <div class="pt">
+          <h3>Réathlétisation spécifique futsal</h3>
+          <p>Objectif : sprints max, changements de direction, ballon, gestes du jeu.</p>
+        </div>
+        <div class="chev">▸</div>
+      </div>
+      <div class="phase-body">
+        <div class="block-title">Ce que tu fais</div>
+        <ul class="clean">
+          <li><b>Sprints à 90 puis 100 %</b> sur distances courtes (spécifique futsal : 5-15 m), récup complète.</li>
+          <li><b>Changements de direction</b> progressifs : angles ouverts → fermés, décélérations, freinages, appuis (le geste le plus à risque pour le quadriceps).</li>
+          <li>Réintroduction du <b>ballon</b> : conduite → passes → frappes légères → frappes puissantes de la <b>jambe gauche</b> (dernier geste, car forte sollicitation du quadriceps).</li>
+          <li>Situations de jeu réduites, opposition légère puis réelle, intensité montante.</li>
+          <li>Séance-type reproduisant la <b>charge d'un match</b> (durée, répétition d'efforts) avant de valider le retour.</li>
+        </ul>
+        <div class="crit-box">
+          <div class="checkline"><input type="checkbox" data-p="5"><label>Sprint à 100 % <b>sans appréhension</b> et sans douleur</label></div>
+          <div class="checkline"><input type="checkbox" data-p="5"><label>Changements de direction rapides (freinage + relance) indolores</label></div>
+          <div class="checkline"><input type="checkbox" data-p="5"><label>Frappe puissante jambe gauche <b>sans douleur ni retenue</b></label></div>
+          <div class="checkline"><input type="checkbox" data-p="5"><label>Entraînement complet type match encaissé sans réaction le lendemain</label></div>
+        </div>
+        <div class="gate">🟢 <b>Feu vert retour match :</b> valider TOUTE la batterie de tests terrain (section 4).</div>
+      </div>
+    </div>
+
+    <!-- PHASE 6 -->
+    <div class="phase" style="--l:var(--phase6)">
+      <div class="phase-head" onclick="togglePhase(this)">
+        <div class="pnum">6</div>
+        <div class="pt">
+          <h3>Retour au match &amp; consolidation</h3>
+          <p>Objectif : reprendre progressivement le temps de jeu, sans récidive.</p>
+        </div>
+        <div class="chev">▸</div>
+      </div>
+      <div class="phase-body">
+        <div class="block-title">Ce que tu fais</div>
+        <ul class="clean">
+          <li>Retour <b>en temps de jeu fractionné</b> : ne pas jouer 40 min d'entrée. Entrer en 2e période / rotations courtes, puis augmenter.</li>
+          <li>Maintenir 2 séances/semaine du <b>protocole anti-récidive</b> (section 6) — la période à plus haut risque de re-blessure est celle qui suit la reprise.</li>
+          <li>Surveiller la fatigue de fin de match (la lésion survient souvent quand le muscle est fatigué).</li>
+        </ul>
+        <div class="crit-box">
+          <div class="checkline"><input type="checkbox" data-p="6"><label>Tous les tests terrain (section 4) validés</label></div>
+          <div class="checkline"><input type="checkbox" data-p="6"><label>Protocole de prévention intégré à la routine</label></div>
+          <div class="checkline"><input type="checkbox" data-p="6"><label>Aucune appréhension mentale sur le geste de frappe/sprint</label></div>
+        </div>
+        <div class="gate">✅ Reprise validée → consolidation sur 4-6 semaines avant de considérer la charge « normale ».</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SECTION 2 : ENTRETIEN PHYSIQUE PARALLÈLE ============ -->
+  <section>
+    <h2 class="sec">2 · Entretien de la condition physique en parallèle <small>sans solliciter le quadriceps gauche</small></h2>
+    <p class="sec-intro">L'idée : arriver à la reprise avec le moins de perte physique possible. Tout ce qui suit se cale sur ta phase du moment.
+    Règle d'or : <b>rien qui provoque une douleur au quadriceps gauche</b>.</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>💪 Haut du corps (dès phase 1)</h3>
+        <p>Tu peux maintenir quasiment tout ton volume calisthenics/muscu haut du corps.</p>
+        <ul class="clean">
+          <li>Tractions, dips, pompes, développés — en position stable, sans appui explosif sur la jambe.</li>
+          <li>Assis/allongé quand la station debout prolongée gêne au début.</li>
+          <li>2-4 séances/semaine, c'est ta base de maintien.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🧱 Gainage &amp; core (dès phase 1-2)</h3>
+        <p>Priorité au tronc, ischios et fessiers (chaîne postérieure) qui protègent indirectement le quadriceps.</p>
+        <ul class="clean">
+          <li>Planches, gainage latéral, hollow hold, dead bug — sans flexion douloureuse.</li>
+          <li>Pont fessier, hip thrust (chaîne postérieure), sans forcer sur le quad.</li>
+          <li>Anti-rotation (Pallof press), essentiel pour les appuis futsal.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>❤️ Cardio sans impact (phase 1-2)</h3>
+        <p>Pour garder le moteur aérobie sans charger la lésion.</p>
+        <ul class="clean">
+          <li>Vélo/ergocycle (résistance croissante selon tolérance), rameur bras si douleur jambe.</li>
+          <li>Aquajogging / natation dès cicatrisation cutanée et accord kiné — excellent sans impact.</li>
+          <li>20-40 min en zone modérée, plusieurs fois/semaine.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🤸 Mobilité &amp; jambe saine</h3>
+        <p>On entretient la jambe droite et les articulations voisines.</p>
+        <ul class="clean">
+          <li>Renforcement <b>jambe droite</b> normal (effet de transfert nerveux sur la gauche).</li>
+          <li>Mobilité hanche/cheville/dos, sans étirement passif agressif du quad gauche.</li>
+          <li>Étirements du quadriceps gauche <b>seulement</b> quand le kiné les autorise (tard).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rule">⚠️ Le seul but de cette section est de <b>ne rien perdre</b>, pas de te fatiguer avant les séances de rééduc.
+    Si une séance haut du corps te laisse trop fatigué pour bien exécuter ta rééduc, allège-la : la rééduc est prioritaire.</div>
+  </section>
+
+  <!-- ============ SECTION 3 : PROGRESSION COURSE ============ -->
+  <section>
+    <h2 class="sec">3 · Progression de la course <small>chaque étape se valide avant la suivante</small></h2>
+    <p class="sec-intro">On ne saute jamais une marche. Chaque palier doit être <b>indolore pendant ET le lendemain</b> avant de monter.
+    Règle simple : on augmente <b>un seul paramètre à la fois</b> (durée, vitesse, direction, ou ballon).</p>
+    <div class="table-scroll">
+    <table>
+      <thead>
+        <tr><th>Étape</th><th>Contenu</th><th>Feu vert pour monter d'un cran</th><th>Phase</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="dot" style="background:var(--phase2)"></span><b>1. Vélo</b></td>
+          <td>Sans résistance → résistance légère → modérée, 15-30 min</td>
+          <td>Pédalage indolore, amplitude complète, rien le lendemain</td><td>2</td></tr>
+        <tr><td><span class="dot" style="background:var(--phase3)"></span><b>2. Marche rapide / trot</b></td>
+          <td>Alternance marche rapide et petits trots en ligne droite</td>
+          <td>Trot 5-10 min sans douleur ni boiterie</td><td>3</td></tr>
+        <tr><td><span class="dot" style="background:var(--phase3)"></span><b>3. Footing</b></td>
+          <td>Course continue allure lente, 15 → 25 min</td>
+          <td>Footing continu indolore + test du lendemain OK</td><td>3</td></tr>
+        <tr><td><span class="dot" style="background:var(--phase4)"></span><b>4. Allures</b></td>
+          <td>Blocs d'allure modérée puis soutenue, récup entre</td>
+          <td>Allure soutenue sans appréhension ni gêne</td><td>4</td></tr>
+        <tr><td><span class="dot" style="background:var(--phase4)"></span><b>5. Accélérations</b></td>
+          <td>Montées en fréquence à 60 → 70 → 80 % vitesse max, courtes, récup complète</td>
+          <td>80 % indolore, palpation propre après séance</td><td>4</td></tr>
+        <tr><td><span class="dot" style="background:var(--phase5)"></span><b>6. Sprints max</b></td>
+          <td>90 → 100 % sur 5-15 m (spécifique futsal), récup complète</td>
+          <td>Sprint 100 % sans retenue ni douleur</td><td>5</td></tr>
+        <tr><td><span class="dot" style="background:var(--phase5)"></span><b>7. Changements de direction</b></td>
+          <td>Angles ouverts → fermés, freinages, décélérations, appuis</td>
+          <td>Appuis vifs + freinage indolores et confiants</td><td>5</td></tr>
+        <tr><td><span class="dot" style="background:var(--phase5)"></span><b>8. Travail avec ballon</b></td>
+          <td>Conduite → passes → frappes légères → frappes puissantes pied gauche</td>
+          <td>Frappe puissante gauche sans douleur ni appréhension</td><td>5</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="rule">📌 <b>Ordre non négociable pour le futsal :</b> les changements de direction et la frappe puissante du pied gauche
+    sont les gestes qui sollicitent le plus le quadriceps — ils arrivent <b>en dernier</b>, jamais avant que le sprint max soit propre.</div>
+  </section>
+
+  <!-- ============ SECTION 4 : TESTS TERRAIN ============ -->
+  <section>
+    <h2 class="sec">4 · Tests de terrain à valider AVANT de rejouer <small>batterie de sortie</small></h2>
+    <p class="sec-intro">Le retour au match n'est autorisé que si <b>toute</b> la batterie est cochée. Un seul test non validé = tu ne joues pas encore.</p>
+    <div class="crit-box" style="padding:8px 12px">
+      <div class="checkline"><input type="checkbox" data-p="test"><label><b>Force symétrique</b> : quadriceps gauche ≥ <b>90 %</b> du droit (dynamomètre/test kiné) — idéalement ischios aussi équilibrés</label></div>
+      <div class="checkline"><input type="checkbox" data-p="test"><label><b>Sprint max sans appréhension</b> : sprint 100 % répété sans retenue mentale ni douleur</label></div>
+      <div class="checkline"><input type="checkbox" data-p="test"><label><b>Frappe de balle</b> : frappe puissante du pied gauche, plusieurs répétitions, sans douleur ni protection du geste</label></div>
+      <div class="checkline"><input type="checkbox" data-p="test"><label><b>Changements de direction / hop tests</b> : appuis, freinages et sauts unipodaux gauche symétriques au droit (≥ 90 %)</label></div>
+      <div class="checkline"><input type="checkbox" data-p="test"><label><b>Test de charge match</b> : un entraînement complet à intensité match encaissé sans réaction le lendemain</label></div>
+      <div class="checkline"><input type="checkbox" data-p="test"><label><b>Palpation propre</b> : plus de point douloureux sur la zone lésée</label></div>
+      <div class="checkline"><input type="checkbox" data-p="test"><label><b>Feu vert kiné/médecin</b> explicite</label></div>
+    </div>
+    <div class="rule">🧠 Le critère le plus sous-estimé est <b>l'appréhension</b> : si tu retiens inconsciemment ta frappe ou ton sprint,
+    ton corps n'est pas prêt — et un muscle protégé se re-blesse. Confiance = critère à part entière.</div>
+  </section>
+
+  <!-- ============ SECTION 5 : SIGNAUX D'ALERTE ============ -->
+  <section>
+    <h2 class="sec">5 · Signaux d'alerte — quand reculer d'une étape</h2>
+    <p class="sec-intro">La règle d'or : au moindre signal rouge, <b>tu redescends d'un palier</b> et tu restes en vert 2-3 séances avant de retenter. Reculer n'est pas régresser, c'est éviter la récidive.</p>
+    <div class="alert-grid">
+      <div class="alert red">
+        <h4>🚩 Reculer d'une étape / stopper la séance si :</h4>
+        <ul>
+          <li>Douleur vive, en « coup de poignard », pendant l'effort</li>
+          <li>Douleur qui <b>augmente</b> au fil de la séance</li>
+          <li>Douleur ou raideur <b>le lendemain matin</b> (le test du lendemain est roi)</li>
+          <li>Réapparition d'un gonflement, d'une chaleur ou d'un hématome</li>
+          <li>Boiterie, modification de la foulée, geste « protégé »</li>
+          <li>Point douloureux qui revient à la palpation de la zone</li>
+          <li>Appréhension à accélérer, sprinter ou frapper</li>
+          <li>Perte de force ressentie par rapport à la séance précédente</li>
+        </ul>
+      </div>
+      <div class="alert green">
+        <h4>✅ Tu peux progresser si, séance après séance :</h4>
+        <ul>
+          <li>Douleur 0/10 pendant et après l'effort du palier</li>
+          <li>Aucune réaction le lendemain matin</li>
+          <li>Amplitude et force qui continuent de progresser</li>
+          <li>Foulée normale, symétrique, sans compensation</li>
+          <li>Confiance intacte sur le geste testé</li>
+          <li>Palpation de la zone indolore</li>
+        </ul>
+      </div>
+    </div>
+    <div class="rule">📅 <b>Principe du planning glissant :</b> si un critère n'est pas validé, la date de reprise recule.
+    Mieux vaut manquer les 2 premières journées de championnat que de récidiver et perdre 2 mois. Une récidive musculaire est
+    souvent <b>plus longue</b> à soigner que la lésion initiale.</div>
+  </section>
+
+  <!-- ============ SECTION 6 : PRÉVENTION RÉCIDIVE ============ -->
+  <section>
+    <h2 class="sec">6 · Protocole de prévention des récidives <small>à garder dans ta routine ensuite</small></h2>
+    <p class="sec-intro">Une fois de retour, ces piliers restent <b>2×/semaine à vie</b> pour blinder le quadriceps et les chaînes qui l'entourent.
+    L'excentrique est la clé : c'est le régime de contraction où le muscle se blesse et se renforce.</p>
+    <div class="grid2">
+      <div class="card">
+        <h3>🎯 Excentrique du quadriceps</h3>
+        <ul class="clean">
+          <li><b>Reverse Nordic curl</b> (Nordic inversé) : à genoux, tronc gainé, on se laisse tomber lentement vers l'arrière en résistant, puis on remonte. Le geste excentrique de référence pour le quadriceps.</li>
+          <li>Progression : amplitude partielle → complète → mains éloignées → lesté.</li>
+          <li>Fentes et squats en <b>tempo excentrique lent</b> (descente 3-4 s).</li>
+          <li>Leg extension en excentrique appuyé.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🔗 Chaîne postérieure &amp; équilibre</h3>
+        <ul class="clean">
+          <li><b>Nordic hamstring curl</b> pour les ischios (protège le couple avant/arrière de la cuisse).</li>
+          <li>Hip thrust, soulevé de terre roumain — fessiers/ischios forts = quadriceps moins exposé.</li>
+          <li>Travail unipodal (fentes bulgares, pistol progressif) pour l'équilibre gauche/droite.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>⚡ Puissance &amp; sprint entretenus</h3>
+        <ul class="clean">
+          <li>Pliométrie régulière (sauts, bondissements) pour garder le muscle réactif.</li>
+          <li>Exposition régulière au <b>sprint max</b> : un muscle habitué à la haute vitesse se déchire moins.</li>
+          <li>Répétitions de changements de direction spécifiques futsal.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>🧩 Gestion de la charge</h3>
+        <ul class="clean">
+          <li>Échauffement complet avant chaque match/entraînement (montée progressive en intensité, gammes).</li>
+          <li>Ne pas enchaîner un pic de charge après une coupure — augmenter progressivement.</li>
+          <li>Surveiller la fatigue : la plupart des lésions arrivent en fin de match, muscle fatigué.</li>
+          <li>Sommeil, hydratation, apports protéinés suffisants pour la récupération.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="disclaim">
+    <b>Important — ceci n'est pas un avis médical.</b> Ce programme est un cadre de réathlétisation général, construit avant
+    la confirmation du grade de ta lésion. Il ne remplace ni ton médecin du sport ni ton kinésithérapeute, qui suivent ta lésion
+    en direct : <b>leur avis clinique prime toujours sur ce document</b>. Fais valider les passages de phase et la reprise par eux.
+    Dès que tu as le compte-rendu d'échographie (grade, taille, localisation, hématome), adapte la vitesse de progression —
+    mais garde toujours les critères objectifs, jamais la date, comme feux verts.
+  </div>
+
+  <footer>
+    Programme de reprise post-déchirure du vaste (quadriceps gauche) · Blessure 15/07/2026 · Reprise visée début sept. 2026<br>
+    Piloté par critères — planning glissant. Coche tes critères au fur et à mesure ; la barre de progression est un repère personnel.
+  </footer>
+</div>
+
+<script>
+  function togglePhase(head){ head.parentElement.classList.toggle('open'); }
+  // ouvrir la phase 1 par défaut
+  document.querySelector('.phase').classList.add('open');
+
+  const STORE = 'klarte-futsall-criteres';
+  const boxes = Array.from(document.querySelectorAll('input[type=checkbox]'));
+  const bar = document.getElementById('pbar');
+  const count = document.getElementById('pcount');
+
+  function load(){
+    try{
+      const saved = JSON.parse(localStorage.getItem(STORE) || '[]');
+      boxes.forEach((b,i)=>{
+        b.checked = !!saved[i];
+        b.closest('.checkline').classList.toggle('done', b.checked);
+      });
+    }catch(e){ /* stockage indisponible : on repart à zéro */ }
+  }
+  function save(){
+    try{ localStorage.setItem(STORE, JSON.stringify(boxes.map(b=>b.checked))); }catch(e){}
+  }
+
+  function refresh(){
+    const done = boxes.filter(b=>b.checked).length;
+    const total = boxes.length;
+    const pct = total ? Math.round(done/total*100) : 0;
+    bar.style.width = pct + '%';
+    count.textContent = done + ' / ' + total + ' critères cochés (' + pct + '%)';
+  }
+  boxes.forEach(b=>{
+    b.addEventListener('change', ()=>{
+      b.closest('.checkline').classList.toggle('done', b.checked);
+      save();
+      refresh();
+    });
+  });
+  function resetAll(){
+    boxes.forEach(b=>{ b.checked=false; b.closest('.checkline').classList.remove('done'); });
+    save();
+    refresh();
+  }
+  load();
+  refresh();
+</script>
+</body>
+</html>
