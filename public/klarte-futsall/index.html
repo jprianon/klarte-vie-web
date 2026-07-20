@@ -2,8 +2,21 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Viewport aligné sur celui de l'app (src/app/layout.tsx) : pas de zoom, encoches
+     gérées, pour que la page se comporte exactement comme l'écran Recettes. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Retour au futsal — Rééducation déchirure du vaste (quadriceps G)</title>
+<!-- Ajout à l'écran d'accueil iOS : icône Klarte + lancement plein écran (sans
+     barre Safari), comme l'app Recettes.
+     Volontairement PAS de <link rel="manifest"> ici : le manifest déclare
+     start_url "/", et iOS 16.4+ s'en sert — l'icône « Futsal » ouvrirait alors
+     les Recettes. Sans manifest, iOS retient l'URL courante (/futsal). -->
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Futsal">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0a0b">
 <style>
   :root{
     --bg:#f6f8fa; --panel:#ffffff; --panel2:#f0f3f6; --line:#d8dee4;
